@@ -65,3 +65,9 @@ def parse_level(paragraph: docx.text.paragraph.Paragraph) -> int | None:
         if match:
             return int(match.group(1))
     return None
+
+
+def parse_docx(filename: str) -> Iterator[Paragraph]:
+    doc = docx.Document(filename)
+    doc_paragraphs = DocParagraphsWrapper(doc.paragraphs)
+    # TODO: process paragraphs
