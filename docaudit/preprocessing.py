@@ -54,3 +54,14 @@ class DocParagraphsWrapper:
             return None
         else:
             return self.paragraphs[self.index - 1]
+
+
+def parse_level(paragraph: docx.text.paragraph.Paragraph) -> int | None:
+    style = paragraph.style.name
+    if style == "Title":
+        return 0
+    else:
+        match = re.search(r"Heading (\d+)", style)
+        if match:
+            return int(match.group(1))
+    return None
