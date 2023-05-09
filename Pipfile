@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 farm-haystack = "*"
+pydantic = "*"
 
 [dev-packages]
 
