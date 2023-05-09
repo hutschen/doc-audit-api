@@ -24,3 +24,33 @@ class Paragraph(BaseModel):
     document_id: int | None = None
     headers: list[str]
     text: str
+
+
+class DocParagraphsWrapper:
+    def __init__(self, paragraphs):
+        self.paragraphs = paragraphs
+        self.index = 0
+
+    def reset(self):
+        self.index = 0
+
+    def next(self):
+        if self.index >= len(self.paragraphs):
+            return None
+        else:
+            self.index += 1
+            return self.paragraphs[self.index - 1]
+
+    def previous(self):
+        if self.index <= 1:
+            return None
+        else:
+            self.index -= 1
+            return self.paragraphs[self.index - 1]
+
+    @property
+    def current(self):
+        if self.index >= len(self.paragraphs):
+            return None
+        else:
+            return self.paragraphs[self.index - 1]
