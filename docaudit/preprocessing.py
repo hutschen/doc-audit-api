@@ -26,36 +26,6 @@ class Paragraph(BaseModel):
     text: str
 
 
-class DocParagraphsWrapper:
-    def __init__(self, paragraphs):
-        self.paragraphs = paragraphs
-        self.index = 0
-
-    def reset(self):
-        self.index = 0
-
-    def next(self):
-        if self.index >= len(self.paragraphs):
-            return None
-        else:
-            self.index += 1
-            return self.paragraphs[self.index - 1]
-
-    def previous(self):
-        if self.index <= 1:
-            return None
-        else:
-            self.index -= 1
-            return self.paragraphs[self.index - 1]
-
-    @property
-    def current(self):
-        if self.index >= len(self.paragraphs):
-            return None
-        else:
-            return self.paragraphs[self.index - 1]
-
-
 def parse_level(paragraph: docx.text.paragraph.Paragraph) -> int | None:
     style = paragraph.style.name
     match = re.search(r"Heading (\d+)", style)
@@ -86,3 +56,4 @@ def parse_docx(filename: str) -> Iterator[Paragraph]:
     headers = []
     for paragraph in docx.Document(filename).paragraphs:
         modify_headers(paragraph, headers)
+        print(headers)
