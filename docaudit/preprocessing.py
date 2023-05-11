@@ -17,12 +17,7 @@ import re
 from typing import Iterator
 
 import docx
-from pydantic import BaseModel
-
-
-class Section(BaseModel):
-    headers: list[str]
-    content: str
+from haystack.schema import Document
 
 
 def parse_level(paragraph: docx.text.paragraph.Paragraph) -> int | None:
@@ -51,12 +46,20 @@ def modify_headers(paragraph, headers: list[str]) -> bool:
     return True
 
 
-def parse_docx(filename: str) -> Iterator[Section]:
+def to_haystack_document(headers, content) -> Document:
+    return Document(
+        meta=dict(headers=headers),
+        content=content[:-2],
+        id_hash_keys=["meta", "content"],
+    )
+
+
+def parse_docx(filename: str) -> Iterator[Document]:
     headers = []
     content = ""
     for paragraph in docx.Document(filename).paragraphs:
         if modify_headers(paragraph, headers):
-            yield Section(headers=headers, content=content[:-2])
+            yield to_haystack_document(headers, content)
 
             # Start with a new section
             content = paragraph.text + "\n" * 2
@@ -64,4 +67,4 @@ def parse_docx(filename: str) -> Iterator[Section]:
             # Continue with current section
             content += paragraph.text + "\n" * 2
 
-    yield Section(headers=headers, content=content)
+    yield to_haystack_document(headers, content)
