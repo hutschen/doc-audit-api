@@ -58,16 +58,31 @@ class DocParagraphsWrapper:
 
 def parse_level(paragraph: docx.text.paragraph.Paragraph) -> int | None:
     style = paragraph.style.name
-    if style == "Title":
-        return 0
-    else:
-        match = re.search(r"Heading (\d+)", style)
-        if match:
-            return int(match.group(1))
+    match = re.search(r"Heading (\d+)", style)
+    if match:
+        return int(match.group(1))
     return None
 
 
+def modify_headers(paragraph, headers: list[str]) -> bool:
+    level = parse_level(paragraph)
+    if level is None:
+        return False
+
+    if len(headers) < level:
+        headers.append(paragraph.text)
+        return True
+
+    while len(headers) > level:
+        headers.pop()
+
+    # len(headers) == level
+    headers.pop()
+    headers.append(paragraph.text)
+    return True
+
+
 def parse_docx(filename: str) -> Iterator[Paragraph]:
-    doc = docx.Document(filename)
-    doc_paragraphs = DocParagraphsWrapper(doc.paragraphs)
-    # TODO: process paragraphs
+    headers = []
+    for paragraph in docx.Document(filename).paragraphs:
+        modify_headers(paragraph, headers)
