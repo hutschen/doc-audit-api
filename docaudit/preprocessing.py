@@ -20,10 +20,9 @@ import docx
 from pydantic import BaseModel
 
 
-class Paragraph(BaseModel):
-    document_id: int | None = None
+class Section(BaseModel):
     headers: list[str]
-    text: str
+    content: str
 
 
 def parse_level(paragraph: docx.text.paragraph.Paragraph) -> int | None:
@@ -52,8 +51,17 @@ def modify_headers(paragraph, headers: list[str]) -> bool:
     return True
 
 
-def parse_docx(filename: str) -> Iterator[Paragraph]:
+def parse_docx(filename: str) -> Iterator[Section]:
     headers = []
+    content = ""
     for paragraph in docx.Document(filename).paragraphs:
-        modify_headers(paragraph, headers)
-        print(headers)
+        if modify_headers(paragraph, headers):
+            yield Section(headers=headers, content=content[:-2])
+
+            # Start with a new section
+            content = paragraph.text + "\n" * 2
+        else:
+            # Continue with current section
+            content += paragraph.text + "\n" * 2
+
+    yield Section(headers=headers, content=content)
