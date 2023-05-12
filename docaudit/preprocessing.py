@@ -17,10 +17,11 @@ import re
 from typing import Iterator
 
 import docx
+from docx.text.paragraph import Paragraph
 from haystack.schema import Document
 
 
-def parse_level(paragraph: docx.text.paragraph.Paragraph) -> int | None:
+def parse_level(paragraph: Paragraph) -> int | None:
     style = paragraph.style.name
     match = re.search(r"Heading (\d+)", style)
     if match:
