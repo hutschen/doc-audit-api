@@ -17,6 +17,6 @@ from docaudit.preprocessing import parse_docx
 
 
 def test_parse_docx():
-    sections = list(parse_docx("data/test.docx"))
+    sections = list(parse_docx("tests/data/test.docx"))
     for section in sections:
         break
