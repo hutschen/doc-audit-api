@@ -6,6 +6,7 @@
 	],
 	"settings": {
 		"licenser.license": "AGPLv3",
-		"licenser.projectName": "DocAudit"
+		"licenser.projectName": "DocAudit",
+		"python.analysis.typeCheckingMode": "basic"
 	}
 }
