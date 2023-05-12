@@ -14,12 +14,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterator, List, Optional, Union
 
 import docx
 from docx.text.paragraph import Paragraph
 from haystack.nodes import BaseComponent
-from haystack.schema import Document
+from haystack.schema import Document, MultiLabel
 
 
 def parse_level(paragraph: Paragraph) -> int | None:
@@ -78,8 +78,12 @@ class DocxParser(BaseComponent):
     def __init__(self):
         pass
 
-    def run(self, file_paths: Dict[str, Any]) -> Dict[str, Any]:
+    def run(self, *, file_paths: List[str], **kwargs):
         documents = []
         for file_path in file_paths:
             documents.extend(parse_docx(file_path))
-        return {"documents": documents}
+        output = {"documents": documents, **kwargs}
+        return output, "output_1"
+
+    def run_batch(self, **kwargs):
+        raise NotImplementedError("run_batch is not implemented for DocxParser")
