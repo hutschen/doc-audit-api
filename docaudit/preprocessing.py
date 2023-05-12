@@ -14,10 +14,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-from typing import Iterator
+from typing import Any, Dict, Iterator
 
 import docx
 from docx.text.paragraph import Paragraph
+from haystack.nodes import BaseComponent
 from haystack.schema import Document
 
 
@@ -69,3 +70,16 @@ def parse_docx(filename: str) -> Iterator[Document]:
             content += paragraph.text + "\n" * 2
 
     yield to_haystack_document(headers, content)
+
+
+class DocxParser(BaseComponent):
+    outgoing_edges = 1
+
+    def __init__(self):
+        pass
+
+    def run(self, file_paths: Dict[str, Any]) -> Dict[str, Any]:
+        documents = []
+        for file_path in file_paths:
+            documents.extend(parse_docx(file_path))
+        return {"documents": documents}
