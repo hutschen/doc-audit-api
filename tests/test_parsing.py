@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from docaudit.preprocessing import parse_docx
+from docaudit.parsing import parse_docx
 
 
 def test_parse_docx():
