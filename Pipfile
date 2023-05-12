@@ -7,9 +7,9 @@ name = "pypi"
 farm-haystack = "*"
 pydantic = "*"
 python-docx = "*"
-pytest = "*"
 
 [dev-packages]
+pytest = "*"
 
 [requires]
 python_version = "3.10"
