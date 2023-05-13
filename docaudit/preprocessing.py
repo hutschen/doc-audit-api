@@ -13,8 +13,37 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from haystack.nodes import BaseComponent
+from typing import Literal
+
+from haystack.nodes import BaseComponent, PreProcessor
 from haystack.schema import Document
+
+
+def create_preprocessor(
+    *,
+    language: Literal["en", "de"] = "en",  # Language must be either 'de' or 'en'
+    clean_whitespace: bool = True,
+    clean_header_footer: bool = True,
+    clean_empty_lines: bool = True,
+    split_by: Literal["word", "sentence", "passage"] = "word",
+    split_length: int = 50,
+    split_overlap: int = 5,
+    split_respect_sentence_boundary: bool = True,
+    progress_bar: bool = True,
+    **kwargs,
+) -> PreProcessor:
+    return PreProcessor(
+        language=language,
+        clean_whitespace=clean_whitespace,
+        clean_header_footer=clean_header_footer,
+        clean_empty_lines=clean_empty_lines,
+        split_by=split_by,
+        split_length=split_length,
+        split_overlap=split_overlap,
+        split_respect_sentence_boundary=split_respect_sentence_boundary,
+        progress_bar=progress_bar,
+        **kwargs,
+    )
 
 
 class LanguageDispatcher(BaseComponent):
