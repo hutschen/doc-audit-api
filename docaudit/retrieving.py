@@ -13,9 +13,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from haystack.document_stores.base import BaseDocumentStore
-from haystack.nodes import EmbeddingRetriever
 
+from haystack.document_stores.base import BaseDocumentStore, get_batches_from_generator
+from haystack.nodes import EmbeddingRetriever, BaseComponent
+from haystack.schema import Document
+from tqdm.auto import tqdm
 
 
 def create_embedding_retriever(document_store: BaseDocumentStore | None = None):
@@ -25,3 +27,38 @@ def create_embedding_retriever(document_store: BaseDocumentStore | None = None):
         embedding_model="deutsche-telekom/gbert-large-paraphrase-cosine",
         use_gpu=False,
     )
+
+
+class EmbeddingGenerator(BaseComponent):
+    def __init__(
+        self,
+        retriever: EmbeddingRetriever,
+        progress_bar: bool = True,
+        batch_size: int = 10_000,
+    ):
+        self.retriever = retriever
+        self.progress_bar = progress_bar
+        self.batch_size = batch_size
+
+    def run(self, *, documents: list[Document], **kwargs):
+        document_count = len(documents)
+        batched_documents = get_batches_from_generator(documents, self.batch_size)
+        with tqdm(
+            total=document_count,
+            disable=not self.progress_bar,
+            position=0,
+            unit=" docs",
+            desc="Generating embeddings",
+        ) as progress_bar:
+            for document_batch in batched_documents:
+                embeddings = self.retriever.embed_documents(document_batch)  # type: ignore
+                for document, embedding in zip(document_batch, embeddings):
+                    document.embedding = embedding
+
+                progress_bar.set_description("Documents processed")
+                progress_bar.update(self.batch_size)
+
+        return {"documents": documents, **kwargs}
+
+    def run_batch(self, **kwargs):
+        raise NotImplementedError("run_batch is not implemented for EmbeddingGenerator")
