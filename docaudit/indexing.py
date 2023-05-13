@@ -15,12 +15,13 @@
 
 from haystack import Pipeline
 from parsing import DocxParser
-from preprocessing import create_preprocessor, LanguageDispatcher
-from storing import create_faiss_document_store, save_faiss_document_store
+from preprocessing import LanguageDispatcher, create_preprocessor
+from retrieving import create_embedding_retriever
+from storing import create_or_load_faiss_document_store, update_and_save_embeddings
 
 indexing_pipeline = Pipeline()
 docx_parser = DocxParser()
-faiss_document_store = create_faiss_document_store()
+faiss_document_store = create_or_load_faiss_document_store()
 
 language_dispatcher = LanguageDispatcher()
 preprocessor_de = create_preprocessor(language="de")
@@ -35,4 +36,6 @@ indexing_pipeline.add_node(component=faiss_document_store, name="DocumentStore",
 indexing_pipeline.run(file_paths=["../tests/data/test.docx"], meta={"language": "de"})
 # fmt: on
 
-save_faiss_document_store(faiss_document_store)
+# Temporarily compute embeddings outside the pipeline
+embedding_retriever = create_embedding_retriever(faiss_document_store)
+update_and_save_embeddings(faiss_document_store, embedding_retriever)
