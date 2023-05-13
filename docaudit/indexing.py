@@ -14,23 +14,29 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from haystack import Pipeline
-from haystack.document_stores import InMemoryDocumentStore
+from storing import FAISSDocumentStoreWriter
 from parsing import DocxParser
-from preprocessing import create_preprocessor, LanguageDispatcher
+from preprocessing import LanguageDispatcher, create_preprocessor
+from retrieving import create_embedding_retriever
+from storing import create_or_load_faiss_document_store
 
-indexing_pipeline = Pipeline()
-document_store = InMemoryDocumentStore(use_bm25=False, embedding_dim=1024)
+
+# fmt: off
 docx_parser = DocxParser()
-
 language_dispatcher = LanguageDispatcher()
 preprocessor_de = create_preprocessor(language="de")
 preprocessor_en = create_preprocessor(language="en")
+embedding_retriever = create_embedding_retriever()
+faiss_document_store = create_or_load_faiss_document_store()
+faiss_document_store_writer = FAISSDocumentStoreWriter(faiss_document_store, embedding_retriever)
+# fmt: on
 
 # fmt: off
+indexing_pipeline = Pipeline()
 indexing_pipeline.add_node(component=docx_parser, name="DocxParser", inputs=["File"])
 indexing_pipeline.add_node(component=language_dispatcher, name="LanguageDispatcher", inputs=["DocxParser"])
 indexing_pipeline.add_node(component=preprocessor_de, name="PreProcessorDe", inputs=["LanguageDispatcher.output_1"])
 indexing_pipeline.add_node(component=preprocessor_en, name="PreProcessorEn", inputs=["LanguageDispatcher.output_2"])
-indexing_pipeline.add_node(component=document_store, name="DocumentStore", inputs=["PreProcessorDe", "PreProcessorEn"])
+indexing_pipeline.add_node(component=faiss_document_store_writer, name="DocumentStoreWriter", inputs=["PreProcessorDe", "PreProcessorEn"])
 indexing_pipeline.run(file_paths=["../tests/data/test.docx"], meta={"language": "de"})
 # fmt: on
