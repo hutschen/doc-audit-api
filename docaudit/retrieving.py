@@ -17,7 +17,8 @@ from haystack.document_stores.base import BaseDocumentStore
 from haystack.nodes import EmbeddingRetriever
 
 
-def create_embedding_retriever(document_store: BaseDocumentStore):
+
+def create_embedding_retriever(document_store: BaseDocumentStore | None = None):
     # Create embedding retriever that can process German texts
     return EmbeddingRetriever(
         document_store=document_store,
