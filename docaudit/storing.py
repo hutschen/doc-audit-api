@@ -16,7 +16,8 @@
 import os
 
 from haystack.document_stores.faiss import FAISSDocumentStore
-from haystack.nodes import DenseRetriever
+from haystack.nodes import BaseComponent, DenseRetriever
+from haystack.schema import Document
 
 
 def delete_faiss_files():
@@ -49,3 +50,21 @@ def update_and_save_embeddings(
 ):
     document_store.update_embeddings(retriever, update_existing_embeddings=False)
     document_store.save("faiss_index.faiss", "faiss_config.json")
+
+
+class FAISSDocumentStoreWriter(BaseComponent):
+    outgoing_edges = 1
+
+    def __init__(self, document_store: FAISSDocumentStore, retriever: DenseRetriever):
+        self.document_store = document_store
+        self.retriever = retriever
+
+    def run(self, *, documents: list[Document], **kwargs):
+        self.document_store.write_documents(documents, duplicate_documents="skip")
+        update_and_save_embeddings(self.document_store, self.retriever)
+        return {"documents": documents, **kwargs}, "output_1"
+
+    def run_batch(self, **kwargs):
+        raise NotImplementedError(
+            "run_batch is not implemented for FAISSDocumentStoreWriter"
+        )
