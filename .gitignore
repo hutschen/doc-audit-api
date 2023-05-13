@@ -1,5 +1,7 @@
 # Project specific
-*.db
+faiss_*.db
+faiss_*.faiss
+faiss_*.json
 *.pyc
 __pycache__
 .pytest_cache
