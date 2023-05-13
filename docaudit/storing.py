@@ -13,17 +13,32 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from haystack.document_stores.faiss import FAISSDocumentStore
 
 
-def create_faiss_document_store():
-    return FAISSDocumentStore(
-        sql_url="sqlite:///faiss_document_store.db",
-        faiss_index_factory_str="Flat",
-        duplicate_documents="skip",
-        embedding_dim=1024,
-    )
+def delete_faiss_files():
+    for filename in [
+        "faiss_document_store.db",
+        "faiss_index.faiss",
+        "faiss_config.json",
+    ]:
+        if os.path.isfile(filename):
+            os.remove(filename)
 
 
-def save_faiss_document_store(document_store: FAISSDocumentStore):
+def create_or_load_faiss_document_store():
+    if os.path.isfile("faiss_index.faiss") and os.path.isfile("faiss_config.json"):
+        # Load existing index
+        return FAISSDocumentStore.load("faiss_index.faiss", "faiss_config.json")
+    else:
+        # Create new index
+        delete_faiss_files()
+        return FAISSDocumentStore(
+            sql_url="sqlite:///faiss_document_store.db",
+            faiss_index_factory_str="Flat",
+            duplicate_documents="skip",
+            embedding_dim=1024,
+        )
     document_store.save("faiss_index.faiss", "faiss_config.json")
