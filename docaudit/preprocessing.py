@@ -49,19 +49,21 @@ def create_preprocessor(
 class LanguageDispatcher(BaseComponent):
     outgoing_edges = 2
 
-    def run(self, *, documents: list[Document], **kwargs):
-        en_documents = []
-        de_documents = []
-        for document in documents:
-            if document.meta["language"] == "de":
-                de_documents.append(document)
-            else:
-                en_documents.append(document)
+    def __init__(self):
+        pass
 
-        return [
-            ({"documents": en_documents, **kwargs}, "output_1"),
-            ({"documents": de_documents, **kwargs}, "output_2"),
-        ]
+    def run(self, *, documents: list[Document], **kwargs):
+        # take the decision based on the first document
+        # it is assumed that all documents have the same language
+        for document in documents:
+            if document.meta.get("language", None) == "de":
+                return {"documents": documents, **kwargs}, "output_2"
+            else:
+                # default language is not german we assume it is english
+                return {"documents": documents, **kwargs}, "output_1"
+
+        # default case when documents is empty
+        return {"documents": documents, **kwargs}, "output_1"
 
     def run_batch(self, **kwargs):
         raise NotImplementedError("run_batch is not implemented for LanguageDispatcher")
