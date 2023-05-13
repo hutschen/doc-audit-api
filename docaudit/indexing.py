@@ -17,9 +17,10 @@ from haystack import Pipeline
 from haystack.document_stores import InMemoryDocumentStore
 from parsing import DocxParser
 from preprocessing import create_preprocessor, LanguageDispatcher
+from storing import document_store
 
 indexing_pipeline = Pipeline()
-document_store = InMemoryDocumentStore(use_bm25=False, embedding_dim=1024)
+# document_store = InMemoryDocumentStore(use_bm25=False, embedding_dim=1024)
 docx_parser = DocxParser()
 
 language_dispatcher = LanguageDispatcher()
