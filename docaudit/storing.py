@@ -16,6 +16,7 @@
 import os
 
 from haystack.document_stores.faiss import FAISSDocumentStore
+from haystack.nodes import DenseRetriever
 
 
 def delete_faiss_files():
@@ -41,4 +42,10 @@ def create_or_load_faiss_document_store():
             duplicate_documents="skip",
             embedding_dim=1024,
         )
+
+
+def update_and_save_embeddings(
+    document_store: FAISSDocumentStore, retriever: DenseRetriever
+):
+    document_store.update_embeddings(retriever, update_existing_embeddings=False)
     document_store.save("faiss_index.faiss", "faiss_config.json")
