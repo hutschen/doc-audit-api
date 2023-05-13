@@ -15,29 +15,22 @@
 
 from haystack import Pipeline
 from haystack.document_stores import InMemoryDocumentStore
-from haystack.nodes import PreProcessor
-
 from parsing import DocxParser
+from preprocessing import create_preprocessor, LanguageDispatcher
 
 indexing_pipeline = Pipeline()
 document_store = InMemoryDocumentStore(use_bm25=False, embedding_dim=1024)
 docx_parser = DocxParser()
 
-preprocessor = PreProcessor(
-    language="de",  # TODO: make this configurable
-    clean_whitespace=True,
-    clean_header_footer=True,
-    clean_empty_lines=True,
-    split_by="word",
-    split_length=50,
-    split_overlap=5,
-    split_respect_sentence_boundary=True,
-    progress_bar=True,
-)
+language_dispatcher = LanguageDispatcher()
+preprocessor_de = create_preprocessor(language="de")
+preprocessor_en = create_preprocessor(language="en")
 
 # fmt: off
 indexing_pipeline.add_node(component=docx_parser, name="DocxParser", inputs=["File"])
-indexing_pipeline.add_node(component=preprocessor, name="PreProcessor", inputs=["DocxParser"])
-indexing_pipeline.add_node(component=document_store, name="DocumentStore", inputs=["PreProcessor"])
-indexing_pipeline.run(file_paths=["../tests/data/test.docx"])
+indexing_pipeline.add_node(component=language_dispatcher, name="LanguageDispatcher", inputs=["DocxParser"])
+indexing_pipeline.add_node(component=preprocessor_de, name="PreProcessorDe", inputs=["LanguageDispatcher.output_1"])
+indexing_pipeline.add_node(component=preprocessor_en, name="PreProcessorEn", inputs=["LanguageDispatcher.output_2"])
+indexing_pipeline.add_node(component=document_store, name="DocumentStore", inputs=["PreProcessorDe", "PreProcessorEn"])
+indexing_pipeline.run(file_paths=["../tests/data/test.docx"], meta={"language": "de"})
 # fmt: on
