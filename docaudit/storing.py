@@ -13,7 +13,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from haystack.document_stores.faiss import FAISSDocumentStore
 
-from haystack.document_stores.sql import SQLDocumentStore
 
-document_store = SQLDocumentStore("sqlite:///documents.db", duplicate_documents="skip")
+def create_faiss_document_store():
+    return FAISSDocumentStore(
+        sql_url="sqlite:///faiss_document_store.db",
+        faiss_index_factory_str="Flat",
+        duplicate_documents="skip",
+        embedding_dim=1024,
+    )
+
+
+def save_faiss_document_store(document_store: FAISSDocumentStore):
+    document_store.save("faiss_index.faiss", "faiss_config.json")

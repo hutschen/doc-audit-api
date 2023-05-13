@@ -14,14 +14,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from haystack import Pipeline
-from haystack.document_stores import InMemoryDocumentStore
 from parsing import DocxParser
 from preprocessing import create_preprocessor, LanguageDispatcher
-from storing import document_store
+from storing import create_faiss_document_store, save_faiss_document_store
 
 indexing_pipeline = Pipeline()
-# document_store = InMemoryDocumentStore(use_bm25=False, embedding_dim=1024)
 docx_parser = DocxParser()
+faiss_document_store = create_faiss_document_store()
 
 language_dispatcher = LanguageDispatcher()
 preprocessor_de = create_preprocessor(language="de")
@@ -32,6 +31,8 @@ indexing_pipeline.add_node(component=docx_parser, name="DocxParser", inputs=["Fi
 indexing_pipeline.add_node(component=language_dispatcher, name="LanguageDispatcher", inputs=["DocxParser"])
 indexing_pipeline.add_node(component=preprocessor_de, name="PreProcessorDe", inputs=["LanguageDispatcher.output_1"])
 indexing_pipeline.add_node(component=preprocessor_en, name="PreProcessorEn", inputs=["LanguageDispatcher.output_2"])
-indexing_pipeline.add_node(component=document_store, name="DocumentStore", inputs=["PreProcessorDe", "PreProcessorEn"])
+indexing_pipeline.add_node(component=faiss_document_store, name="DocumentStore", inputs=["PreProcessorDe", "PreProcessorEn"])
 indexing_pipeline.run(file_paths=["../tests/data/test.docx"], meta={"language": "de"})
 # fmt: on
+
+save_faiss_document_store(faiss_document_store)
