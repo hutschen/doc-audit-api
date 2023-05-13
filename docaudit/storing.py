@@ -18,27 +18,32 @@ import os
 from haystack.document_stores.faiss import FAISSDocumentStore
 from haystack.nodes import BaseComponent, DenseRetriever
 from haystack.schema import Document
+from utils import to_abs_path
+
+FAISS_DOCUMENT_STORE_FILENAME = to_abs_path("faiss_document_store.db")
+FAISS_INDEX_FILENAME = to_abs_path("faiss_index.faiss")
+FAISS_CONFIG_FILENAME = to_abs_path("faiss_config.json")
 
 
 def delete_faiss_files():
     for filename in [
-        "faiss_document_store.db",
-        "faiss_index.faiss",
-        "faiss_config.json",
+        FAISS_DOCUMENT_STORE_FILENAME,
+        FAISS_INDEX_FILENAME,
+        FAISS_CONFIG_FILENAME,
     ]:
         if os.path.isfile(filename):
             os.remove(filename)
 
 
 def create_or_load_faiss_document_store():
-    if os.path.isfile("faiss_index.faiss") and os.path.isfile("faiss_config.json"):
+    if os.path.isfile(FAISS_INDEX_FILENAME) and os.path.isfile(FAISS_CONFIG_FILENAME):
         # Load existing index
-        return FAISSDocumentStore.load("faiss_index.faiss", "faiss_config.json")
+        return FAISSDocumentStore.load(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
     else:
         # Create new index
         delete_faiss_files()
         return FAISSDocumentStore(
-            sql_url="sqlite:///faiss_document_store.db",
+            sql_url=f"sqlite:///{FAISS_DOCUMENT_STORE_FILENAME}",
             faiss_index_factory_str="Flat",
             duplicate_documents="skip",
             embedding_dim=1024,
@@ -49,7 +54,7 @@ def update_and_save_embeddings(
     document_store: FAISSDocumentStore, retriever: DenseRetriever
 ):
     document_store.update_embeddings(retriever, update_existing_embeddings=False)
-    document_store.save("faiss_index.faiss", "faiss_config.json")
+    document_store.save(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
 
 
 class FAISSDocumentStoreWriter(BaseComponent):
