@@ -30,6 +30,8 @@ def create_embedding_retriever(document_store: BaseDocumentStore | None = None):
 
 
 class EmbeddingGenerator(BaseComponent):
+    outgoing_edges = 1
+
     def __init__(
         self,
         retriever: EmbeddingRetriever,
@@ -58,7 +60,7 @@ class EmbeddingGenerator(BaseComponent):
                 progress_bar.set_description("Documents processed")
                 progress_bar.update(self.batch_size)
 
-        return {"documents": documents, **kwargs}
+        return {"documents": documents, **kwargs}, "output_1"
 
     def run_batch(self, **kwargs):
         raise NotImplementedError("run_batch is not implemented for EmbeddingGenerator")

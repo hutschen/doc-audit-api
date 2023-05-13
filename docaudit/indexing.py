@@ -16,8 +16,8 @@
 from haystack import Pipeline
 from parsing import DocxParser
 from preprocessing import LanguageDispatcher, create_preprocessor
-from retrieving import create_embedding_retriever
-from storing import create_or_load_faiss_document_store, update_and_save_embeddings
+from retrieving import create_embedding_retriever, EmbeddingGenerator
+from storing import create_or_load_faiss_document_store
 
 indexing_pipeline = Pipeline()
 docx_parser = DocxParser()
@@ -26,16 +26,17 @@ faiss_document_store = create_or_load_faiss_document_store()
 language_dispatcher = LanguageDispatcher()
 preprocessor_de = create_preprocessor(language="de")
 preprocessor_en = create_preprocessor(language="en")
+embedding_retriever = create_embedding_retriever()
+embedding_generator = EmbeddingGenerator(embedding_retriever)
 
 # fmt: off
 indexing_pipeline.add_node(component=docx_parser, name="DocxParser", inputs=["File"])
 indexing_pipeline.add_node(component=language_dispatcher, name="LanguageDispatcher", inputs=["DocxParser"])
 indexing_pipeline.add_node(component=preprocessor_de, name="PreProcessorDe", inputs=["LanguageDispatcher.output_1"])
 indexing_pipeline.add_node(component=preprocessor_en, name="PreProcessorEn", inputs=["LanguageDispatcher.output_2"])
-indexing_pipeline.add_node(component=faiss_document_store, name="DocumentStore", inputs=["PreProcessorDe", "PreProcessorEn"])
+indexing_pipeline.add_node(component=embedding_generator, name="EmbeddingGenerator", inputs=["PreProcessorDe", "PreProcessorEn"])
+indexing_pipeline.add_node(component=faiss_document_store, name="DocumentStore", inputs=["EmbeddingGenerator"])
 indexing_pipeline.run(file_paths=["../tests/data/test.docx"], meta={"language": "de"})
 # fmt: on
 
-# Temporarily compute embeddings outside the pipeline
-embedding_retriever = create_embedding_retriever(faiss_document_store)
-update_and_save_embeddings(faiss_document_store, embedding_retriever)
+faiss_document_store.save("faiss_index.faiss", "faiss_config.json")
