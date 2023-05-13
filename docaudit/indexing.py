@@ -15,6 +15,7 @@
 
 from haystack import Pipeline
 from haystack.document_stores import InMemoryDocumentStore
+from haystack.nodes import PreProcessor
 
 from parsing import DocxParser
 
@@ -22,9 +23,21 @@ indexing_pipeline = Pipeline()
 document_store = InMemoryDocumentStore(use_bm25=False, embedding_dim=1024)
 docx_parser = DocxParser()
 
-# TODO add preprocessing
-indexing_pipeline.add_node(component=docx_parser, name="DocxParser", inputs=["File"])
-indexing_pipeline.add_node(
-    component=document_store, name="DocumentStore", inputs=["DocxParser"]
+preprocessor = PreProcessor(
+    language="de",  # TODO: make this configurable
+    clean_whitespace=True,
+    clean_header_footer=True,
+    clean_empty_lines=True,
+    split_by="word",
+    split_length=50,
+    split_overlap=5,
+    split_respect_sentence_boundary=True,
+    progress_bar=True,
 )
+
+# fmt: off
+indexing_pipeline.add_node(component=docx_parser, name="DocxParser", inputs=["File"])
+indexing_pipeline.add_node(component=preprocessor, name="PreProcessor", inputs=["DocxParser"])
+indexing_pipeline.add_node(component=document_store, name="DocumentStore", inputs=["PreProcessor"])
 indexing_pipeline.run(file_paths=["../tests/data/test.docx"])
+# fmt: on
