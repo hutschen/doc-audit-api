@@ -1,10 +1,9 @@
 # Project specific
-faiss_*.db
-faiss_*.faiss
-faiss_*.json
 *.pyc
 __pycache__
 .pytest_cache
+faiss/*
+!faiss/.gitkeep
 tests/data/*
 !tests/data/.gitkeep
 

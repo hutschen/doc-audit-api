@@ -20,9 +20,9 @@ from haystack.nodes import BaseComponent, DenseRetriever
 from haystack.schema import Document
 from utils import to_abs_path
 
-FAISS_DOCUMENT_STORE_FILENAME = to_abs_path("faiss_document_store.db")
-FAISS_INDEX_FILENAME = to_abs_path("faiss_index.faiss")
-FAISS_CONFIG_FILENAME = to_abs_path("faiss_config.json")
+FAISS_DOCUMENT_STORE_FILENAME = to_abs_path("../faiss/faiss_document_store.db")
+FAISS_INDEX_FILENAME = to_abs_path("../faiss/faiss_index.faiss")
+FAISS_CONFIG_FILENAME = to_abs_path("../faiss/faiss_config.json")
 
 
 def delete_faiss_files():
