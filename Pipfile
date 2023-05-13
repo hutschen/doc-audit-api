@@ -8,6 +8,7 @@ farm-haystack = "*"
 pydantic = "*"
 python-docx = "*"
 sqlalchemy = "*"
+faiss-cpu = "*"
 
 [dev-packages]
 pytest = "*"
