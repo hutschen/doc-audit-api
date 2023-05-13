@@ -48,20 +48,24 @@ def modify_headers(paragraph, headers: list[str]) -> bool:
     return True
 
 
-def to_haystack_document(headers, content) -> Document:
+def to_haystack_document(headers, content, meta: dict | None = None) -> Document:
     return Document(
-        meta=dict(headers=headers),
+        # Combine meta and headers into one meta dict
+        meta={
+            **(meta or {}),
+            "headers": headers,
+        },
         content=content[:-2],
         id_hash_keys=["meta", "content"],
     )
 
 
-def parse_docx(filename: str) -> Iterator[Document]:
+def parse_docx(filename: str, meta: dict | None = None) -> Iterator[Document]:
     headers = []
     content = ""
     for paragraph in docx.Document(filename).paragraphs:
         if modify_headers(paragraph, headers):
-            yield to_haystack_document(headers, content)
+            yield to_haystack_document(headers, content, meta)
 
             # Start with a new section
             content = paragraph.text + "\n" * 2
@@ -69,7 +73,7 @@ def parse_docx(filename: str) -> Iterator[Document]:
             # Continue with current section
             content += paragraph.text + "\n" * 2
 
-    yield to_haystack_document(headers, content)
+    yield to_haystack_document(headers, content, meta)
 
 
 class DocxParser(BaseComponent):
@@ -78,10 +82,10 @@ class DocxParser(BaseComponent):
     def __init__(self):
         pass
 
-    def run(self, *, file_paths: List[str], **kwargs):
+    def run(self, *, file_paths: List[str], meta: dict | None = None, **kwargs):
         documents = []
         for file_path in file_paths:
-            documents.extend(parse_docx(file_path))
+            documents.extend(parse_docx(file_path, meta))
         output = {"documents": documents, **kwargs}
         return output, "output_1"
 
