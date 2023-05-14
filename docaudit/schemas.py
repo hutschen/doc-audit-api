@@ -15,9 +15,7 @@
 
 from sqlalchemy import Column, Integer, String, Table, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+from .database import Base
 
 # Association table for the many-to-many relationship between Document and HaystackDocument
 document_haystackdocument_table = Table(
@@ -70,6 +68,4 @@ class HaystackDocument(Base):
         "Document",
         secondary=document_haystackdocument_table,
         back_populates="haystack_documents",
-        # Cascade option to delete orphaned HaystackDocument instances
-        cascade="all, delete-orphan",
     )
