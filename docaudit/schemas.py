@@ -38,7 +38,7 @@ document_haystackdocument_table = Table(
 
 class Project(Base):
     __tablename__ = "project"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
 
     # Relationship to Document
@@ -51,7 +51,7 @@ class Project(Base):
 
 class Document(Base):
     __tablename__ = "document"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True)
     title = Column(String, nullable=False)
     version = Column(String)
     author = Column(String)
