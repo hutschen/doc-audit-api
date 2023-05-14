@@ -14,12 +14,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from contextlib import contextmanager
+from typing import Type, TypeVar
 
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.engine.base import Engine
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
-from sqlalchemy.ext.declarative import declarative_base
+
+from docaudit.errors import NotFoundError
 
 from .config import DatabaseConfig
 
@@ -100,3 +103,15 @@ def drop_all():
         raise RuntimeError("Engine is not initialized")
 
     Base.metadata.drop_all(bind=__State.engine)
+
+
+T = TypeVar("T", bound=Base)
+
+
+def read_from_db(session: Session, orm_class: Type[T], id: int) -> T:
+    item = session.get(orm_class, id)
+    if item:
+        return item
+    else:
+        item_name = orm_class.__name__
+        raise NotFoundError(f"No {item_name} with id={id}.")
