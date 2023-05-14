@@ -21,7 +21,7 @@ from fastapi import APIRouter, Depends
 
 from .database import get_session
 from .schemas import Project
-from .models import ProjectOutput
+from .models import ProjectInput, ProjectOutput
 
 
 class CRUDBase:
@@ -68,6 +68,13 @@ class Projects(CRUDBase):
         # Execute query
         return self.session.execute(query).scalars().all()
 
+    def create_project(self, creation: ProjectInput, flush: bool = True) -> Project:
+        project = Project(**creation.dict())
+        self.session.add(project)
+        if flush:
+            self.session.flush()
+        return project
+
 
 project_router = APIRouter(tags=["projects"])
 
@@ -75,3 +82,10 @@ project_router = APIRouter(tags=["projects"])
 @project_router.get("/projects", response_model=list[ProjectOutput])
 def get_projects(projects: Projects = Depends(Projects)) -> list[Project]:
     return projects.list_projects()
+
+
+@project_router.post("/projects", status_code=201, response_model=ProjectOutput)
+def create_project(
+    project: ProjectInput, projects: Projects = Depends(Projects)
+) -> Project:
+    return projects.create_project(project)
