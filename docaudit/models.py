@@ -22,6 +22,9 @@ class ProjectInput(BaseModel):
 
 
 class ProjectOutput(ProjectInput):
+    class Config:
+        orm_mode = True
+
     id: int
 
 
@@ -33,5 +36,8 @@ class DocumentInput(BaseModel):
 
 
 class DocumentOutput(DocumentInput):
+    class Config:
+        orm_mode = True
+
     id: int
     project: ProjectOutput
