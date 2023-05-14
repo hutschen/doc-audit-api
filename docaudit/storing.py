@@ -19,7 +19,8 @@ import threading
 from haystack.document_stores.faiss import FAISSDocumentStore
 from haystack.nodes import BaseComponent, DenseRetriever
 from haystack.schema import Document
-from utils import to_abs_path
+
+from .utils import to_abs_path
 
 FAISS_DOCUMENT_STORE_FILENAME = to_abs_path("faiss/faiss_document_store.db")
 FAISS_INDEX_FILENAME = to_abs_path("faiss/faiss_index.faiss")

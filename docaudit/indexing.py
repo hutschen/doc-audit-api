@@ -17,10 +17,11 @@ from typing import Literal
 
 from haystack import Pipeline
 from haystack.schema import Document
-from parsing import DocxParser
-from preprocessing import LanguageDispatcher, create_preprocessor
-from retrieving import create_embedding_retriever
-from storing import FAISSDocumentStoreWriter, create_or_load_faiss_document_store
+
+from .parsing import DocxParser
+from .preprocessing import LanguageDispatcher, create_preprocessor
+from .retrieving import create_embedding_retriever
+from .storing import FAISSDocumentStoreWriter, create_or_load_faiss_document_store
 
 # fmt: off
 docx_parser = DocxParser()
