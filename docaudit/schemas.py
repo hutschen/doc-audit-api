@@ -45,6 +45,7 @@ class Document(Base):
     title = Column(String, nullable=False)
     version = Column(String)
     author = Column(String)
+    language = Column(String)
 
     # ForeignKey column pointing to Project
     project_id = Column(Integer, ForeignKey("project.id"))
