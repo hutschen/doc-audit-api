@@ -49,7 +49,7 @@ class Document(Base):
     project_id = Column(Integer, ForeignKey("project.id"))
 
     # Relationship to Project
-    project = relationship("Project", back_populates="documents")
+    project = relationship("Project", back_populates="documents", lazy="joined")
 
     # Relationship to HaystackDocument
     haystack_documents = relationship(
