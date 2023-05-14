@@ -61,6 +61,8 @@ class Document(Base):
         "Project",
         secondary=project_document_table,
         back_populates="documents",
+        # Cascade option to delete orphaned Document instances
+        cascade="all, delete-orphan",
     )
 
     # Relationship to HaystackDocument
@@ -80,4 +82,6 @@ class HaystackDocument(Base):
         "Document",
         secondary=document_haystackdocument_table,
         back_populates="haystack_documents",
+        # Cascade option to delete orphaned HaystackDocument instances
+        cascade="all, delete-orphan",
     )
