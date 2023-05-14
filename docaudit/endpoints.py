@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import Select
 from fastapi import APIRouter, Depends
 
-from .database import get_session, read_from_db
+from .database import delete_from_db, get_session, read_from_db
 from .schemas import Project
 from .models import ProjectInput, ProjectOutput
 
@@ -78,6 +78,24 @@ class Projects(CRUDBase):
     def get_project(self, project_id: int) -> Project:
         return read_from_db(self.session, Project, project_id)
 
+    def update_project(
+        self,
+        project: Project,
+        update: ProjectInput,
+        patch: bool = False,
+        flush: bool = True,
+    ) -> None:
+        # Update project
+        for key, value in update.dict(exclude_unset=patch).items():
+            setattr(project, key, value)
+
+        # Flush session
+        if flush:
+            self.session.flush()
+
+    def delete_project(self, project: Project, flush: bool = True) -> None:
+        return delete_from_db(self.session, project, flush)
+
 
 project_router = APIRouter(tags=["projects"])
 
@@ -97,3 +115,18 @@ def create_project(
 @project_router.get("/projects/{project_id}", response_model=ProjectOutput)
 def get_project(project_id: int, projects: Projects = Depends(Projects)) -> Project:
     return projects.get_project(project_id)
+
+
+@project_router.put("/projects/{project_id}", response_model=ProjectOutput)
+def update_project(
+    project_id: int, project_input: ProjectInput, projects: Projects = Depends(Projects)
+) -> Project:
+    project = projects.get_project(project_id)
+    projects.update_project(project, project_input)
+    return project
+
+
+@project_router.delete("/projects/{project_id}", status_code=204)
+def delete_project(project_id: int, projects: Projects = Depends(Projects)) -> None:
+    project = projects.get_project(project_id)
+    projects.delete_project(project)
