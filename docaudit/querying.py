@@ -14,8 +14,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from haystack import Pipeline
-from retrieving import create_embedding_retriever
-from storing import create_or_load_faiss_document_store
+from haystack.schema import Document
+
+from .retrieving import create_embedding_retriever
+from .storing import create_or_load_faiss_document_store
 
 faiss_document_store = create_or_load_faiss_document_store()
 embedding_retriever = create_embedding_retriever(faiss_document_store)
@@ -25,14 +27,9 @@ querying_pipeline = Pipeline()
 querying_pipeline.add_node(component=embedding_retriever, name="EmbeddingRetriever", inputs=["Query"])
 # fmt: on
 
-if __name__ == "__main__":
-    while True:
-        query = input("Please enter query: ")
-        results = querying_pipeline.run(
-            query=query, params={"EmbeddingRetriever": {"top_k": 3}}
-        )
 
-        # Print out the results
-        for result in results["documents"]:  # type: ignore
-            print(f"Text: {result.content} (Score: {result.score})")
-            print("-" * 100)
+def query(query: str, top_k: int = 3) -> list[Document]:
+    results = querying_pipeline.run(
+        query=query, params={"EmbeddingRetriever": {"top_k": top_k}}
+    )
+    return results.get("documents", []) if results else []
