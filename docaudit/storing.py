@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import threading
 
 from haystack.document_stores.faiss import FAISSDocumentStore
 from haystack.nodes import BaseComponent, DenseRetriever
@@ -59,14 +60,16 @@ def update_and_save_embeddings(
 
 class FAISSDocumentStoreWriter(BaseComponent):
     outgoing_edges = 1
+    _write_lock = threading.Lock()
 
     def __init__(self, document_store: FAISSDocumentStore, retriever: DenseRetriever):
         self.document_store = document_store
         self.retriever = retriever
 
     def run(self, *, documents: list[Document], **kwargs):
-        self.document_store.write_documents(documents, duplicate_documents="skip")
-        update_and_save_embeddings(self.document_store, self.retriever)
+        with self._write_lock:
+            self.document_store.write_documents(documents, duplicate_documents="skip")
+            update_and_save_embeddings(self.document_store, self.retriever)
         return {"documents": documents, **kwargs}, "output_1"
 
     def run_batch(self, **kwargs):
