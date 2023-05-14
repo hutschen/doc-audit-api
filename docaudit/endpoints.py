@@ -14,35 +14,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from typing import Any
+
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from sqlalchemy.sql.expression import Select
-from fastapi import APIRouter, Depends
 
-from .database import delete_from_db, get_session, read_from_db
-from .schemas import Project
+from .database import CRUDBase, delete_from_db, get_session, read_from_db
 from .models import ProjectInput, ProjectOutput
-
-
-class CRUDBase:
-    @staticmethod
-    def _modify_query(
-        query: Select,
-        where_clauses: list[Any] | None = None,
-        order_by_clauses: list[Any] | None = None,
-        offset: int | None = None,
-        limit: int | None = None,
-    ) -> Select:
-        """Modify a query to include all required clauses and offset and limit."""
-        if where_clauses:
-            query = query.where(*where_clauses)
-        if order_by_clauses:
-            query = query.order_by(*order_by_clauses)
-        if offset is not None:
-            query = query.offset(offset)
-        if limit is not None:
-            query = query.limit(limit)
-        return query
+from .schemas import Project
 
 
 class Projects(CRUDBase):
