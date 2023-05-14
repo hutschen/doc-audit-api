@@ -62,14 +62,19 @@ class FAISSDocumentStoreWriter(BaseComponent):
     outgoing_edges = 1
     _write_lock = threading.Lock()
 
-    def __init__(self, document_store: FAISSDocumentStore, retriever: DenseRetriever):
+    def __init__(
+        self,
+        document_store: FAISSDocumentStore,
+        retriever: DenseRetriever | None = None,
+    ):
         self.document_store = document_store
         self.retriever = retriever
 
     def run(self, *, documents: list[Document], **kwargs):
         with self._write_lock:
             self.document_store.write_documents(documents, duplicate_documents="skip")
-            update_and_save_embeddings(self.document_store, self.retriever)
+            if self.retriever is not None:
+                update_and_save_embeddings(self.document_store, self.retriever)
         return {"documents": documents, **kwargs}, "output_1"
 
     def run_batch(self, **kwargs):
