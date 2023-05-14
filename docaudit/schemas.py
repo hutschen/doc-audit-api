@@ -19,14 +19,6 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-# Association table for the many-to-many relationship between Project and Document
-project_document_table = Table(
-    "project_document",
-    Base.metadata,
-    Column("project_id", Integer, ForeignKey("project.id")),
-    Column("document_id", Integer, ForeignKey("document.id")),
-)
-
 # Association table for the many-to-many relationship between Document and HaystackDocument
 document_haystackdocument_table = Table(
     "document_haystackdocument",
@@ -41,11 +33,9 @@ class Project(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
 
-    # Relationship to Document
+    # Relationship to Document with cascade delete
     documents = relationship(
-        "Document",
-        secondary=project_document_table,
-        back_populates="projects",
+        "Document", back_populates="project", cascade="all, delete, delete-orphan"
     )
 
 
@@ -56,14 +46,11 @@ class Document(Base):
     version = Column(String)
     author = Column(String)
 
+    # ForeignKey column pointing to Project
+    project_id = Column(Integer, ForeignKey("project.id"))
+
     # Relationship to Project
-    projects = relationship(
-        "Project",
-        secondary=project_document_table,
-        back_populates="documents",
-        # Cascade option to delete orphaned Document instances
-        cascade="all, delete-orphan",
-    )
+    project = relationship("Project", back_populates="documents")
 
     # Relationship to HaystackDocument
     haystack_documents = relationship(
