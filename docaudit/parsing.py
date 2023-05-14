@@ -64,8 +64,10 @@ def parse_docx(filename: str, meta: dict | None = None) -> Iterator[Document]:
     headers = []
     content = ""
     for paragraph in docx.Document(filename).paragraphs:
+        prev_headers = headers.copy()
         if modify_headers(paragraph, headers):
-            yield to_haystack_document(headers, content, meta)
+            # New section started, yield the previous section
+            yield to_haystack_document(prev_headers, content, meta)
 
             # Start with a new section
             content = paragraph.text + "\n" * 2
