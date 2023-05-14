@@ -118,9 +118,9 @@ def read_from_db(session: Session, orm_class: Type[T], id: int) -> T:
         raise NotFoundError(f"No {item_name} with id={id}.")
 
 
-def delete_from_db(session: Session, item: Any, skip_flush: bool = False) -> None:
+def delete_from_db(session: Session, item: Any, flush: bool = False) -> None:
     session.delete(item)
-    if not skip_flush:
+    if flush:
         session.flush()
 
 
