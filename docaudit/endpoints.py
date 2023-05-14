@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import Select
 from fastapi import APIRouter, Depends
 
-from .database import get_session
+from .database import get_session, read_from_db
 from .schemas import Project
 from .models import ProjectInput, ProjectOutput
 
@@ -75,6 +75,9 @@ class Projects(CRUDBase):
             self.session.flush()
         return project
 
+    def get_project(self, project_id: int) -> Project:
+        return read_from_db(self.session, Project, project_id)
+
 
 project_router = APIRouter(tags=["projects"])
 
@@ -89,3 +92,8 @@ def create_project(
     project: ProjectInput, projects: Projects = Depends(Projects)
 ) -> Project:
     return projects.create_project(project)
+
+
+@project_router.get("/projects/{project_id}", response_model=ProjectOutput)
+def get_project(project_id: int, projects: Projects = Depends(Projects)) -> Project:
+    return projects.get_project(project_id)
