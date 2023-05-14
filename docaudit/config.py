@@ -13,23 +13,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from haystack import Pipeline
-from haystack.schema import Document
-
-from .retrieving import create_embedding_retriever
-from .storing import create_or_load_faiss_document_store
-
-faiss_document_store = create_or_load_faiss_document_store()
-embedding_retriever = create_embedding_retriever(faiss_document_store)
-
-# fmt: off
-querying_pipeline = Pipeline()
-querying_pipeline.add_node(component=embedding_retriever, name="EmbeddingRetriever", inputs=["Query"])
-# fmt: on
+from functools import lru_cache
+import yaml
+from pydantic import BaseModel
+from docaudit.utils import to_abs_path
 
 
-def query(query: str, top_k: int = 3) -> list[Document]:
-    results = querying_pipeline.run(
-        query=query, params={"EmbeddingRetriever": {"top_k": top_k}}
-    )
-    return results.get("documents", []) if results else []
+class DatabaseConfig(BaseModel):
+    url: str = "sqlite://"
+    echo: bool = False
+
+
+class Config(BaseModel):
+    database: DatabaseConfig = DatabaseConfig()
+
+
+CONFIG_FILENAME = "config.yml"
+
+
+@lru_cache()
+def load_config() -> Config:
+    with open(to_abs_path(CONFIG_FILENAME), "r") as config_file:
+        config_data = yaml.safe_load(config_file)
+    return Config.parse_obj(config_data)

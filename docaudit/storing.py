@@ -14,15 +14,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import threading
+from functools import lru_cache
 
 from haystack.document_stores.faiss import FAISSDocumentStore
 from haystack.nodes import BaseComponent, DenseRetriever
 from haystack.schema import Document
-from utils import to_abs_path
 
-FAISS_DOCUMENT_STORE_FILENAME = to_abs_path("../faiss/faiss_document_store.db")
-FAISS_INDEX_FILENAME = to_abs_path("../faiss/faiss_index.faiss")
-FAISS_CONFIG_FILENAME = to_abs_path("../faiss/faiss_config.json")
+from .utils import to_abs_path
+
+FAISS_DOCUMENT_STORE_FILENAME = to_abs_path("faiss/faiss_document_store.db")
+FAISS_INDEX_FILENAME = to_abs_path("faiss/faiss_index.faiss")
+FAISS_CONFIG_FILENAME = to_abs_path("faiss/faiss_config.json")
 
 
 def delete_faiss_files():
@@ -35,7 +38,8 @@ def delete_faiss_files():
             os.remove(filename)
 
 
-def create_or_load_faiss_document_store():
+@lru_cache()  # use lru_cache to avoid creating multiple instances of the document store
+def create_or_load_faiss_document_store() -> FAISSDocumentStore:
     if os.path.isfile(FAISS_INDEX_FILENAME) and os.path.isfile(FAISS_CONFIG_FILENAME):
         # Load existing index
         return FAISSDocumentStore.load(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
@@ -59,14 +63,21 @@ def update_and_save_embeddings(
 
 class FAISSDocumentStoreWriter(BaseComponent):
     outgoing_edges = 1
+    _write_lock = threading.Lock()
 
-    def __init__(self, document_store: FAISSDocumentStore, retriever: DenseRetriever):
+    def __init__(
+        self,
+        document_store: FAISSDocumentStore,
+        retriever: DenseRetriever | None = None,
+    ):
         self.document_store = document_store
         self.retriever = retriever
 
     def run(self, *, documents: list[Document], **kwargs):
-        self.document_store.write_documents(documents, duplicate_documents="skip")
-        update_and_save_embeddings(self.document_store, self.retriever)
+        with self._write_lock:
+            self.document_store.write_documents(documents, duplicate_documents="skip")
+            if self.retriever is not None:
+                update_and_save_embeddings(self.document_store, self.retriever)
         return {"documents": documents, **kwargs}, "output_1"
 
     def run_batch(self, **kwargs):

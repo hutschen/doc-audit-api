@@ -13,23 +13,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from haystack import Pipeline
-from haystack.schema import Document
 
-from .retrieving import create_embedding_retriever
-from .storing import create_or_load_faiss_document_store
+from docaudit.indexing import index_docx
+from docaudit.querying import query
 
-faiss_document_store = create_or_load_faiss_document_store()
-embedding_retriever = create_embedding_retriever(faiss_document_store)
+index_docx(["tests/data/test.docx"], language="de")
 
-# fmt: off
-querying_pipeline = Pipeline()
-querying_pipeline.add_node(component=embedding_retriever, name="EmbeddingRetriever", inputs=["Query"])
-# fmt: on
-
-
-def query(query: str, top_k: int = 3) -> list[Document]:
-    results = querying_pipeline.run(
-        query=query, params={"EmbeddingRetriever": {"top_k": top_k}}
-    )
-    return results.get("documents", []) if results else []
+if __name__ == "__main__":
+    while True:
+        for document in query(input("Please enter query: ")):
+            # fmt: off
+            headers = ", ".join(document.meta.get("headers", []))
+            print(f"Headers: {headers}\nText: {document.content} (Score: {document.score})")
+            print("-" * 100)
+            # fmt: on

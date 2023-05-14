@@ -29,6 +29,7 @@ def create_preprocessor(
     split_length: int = 50,
     split_overlap: int = 5,
     split_respect_sentence_boundary: bool = True,
+    id_hash_keys: list[str] = ["meta", "content"],
     progress_bar: bool = True,
     **kwargs,
 ) -> PreProcessor:
@@ -41,6 +42,7 @@ def create_preprocessor(
         split_length=split_length,
         split_overlap=split_overlap,
         split_respect_sentence_boundary=split_respect_sentence_boundary,
+        id_hash_keys=id_hash_keys,
         progress_bar=progress_bar,
         **kwargs,
     )
