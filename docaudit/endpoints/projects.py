@@ -19,9 +19,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .database import CRUDBase, delete_from_db, get_session, read_from_db
-from .models import ProjectInput, ProjectOutput
-from .schemas import Project
+from ..database import CRUDBase, delete_from_db, get_session, read_from_db
+from ..models import ProjectInput, ProjectOutput
+from ..schemas import Project
 
 
 class Projects(CRUDBase):
@@ -76,27 +76,27 @@ class Projects(CRUDBase):
         return delete_from_db(self.session, project, flush)
 
 
-project_router = APIRouter(tags=["projects"])
+router = APIRouter(tags=["projects"])
 
 
-@project_router.get("/projects", response_model=list[ProjectOutput])
+@router.get("/projects", response_model=list[ProjectOutput])
 def get_projects(projects: Projects = Depends(Projects)) -> list[Project]:
     return projects.list_projects()
 
 
-@project_router.post("/projects", status_code=201, response_model=ProjectOutput)
+@router.post("/projects", status_code=201, response_model=ProjectOutput)
 def create_project(
     project: ProjectInput, projects: Projects = Depends(Projects)
 ) -> Project:
     return projects.create_project(project)
 
 
-@project_router.get("/projects/{project_id}", response_model=ProjectOutput)
+@router.get("/projects/{project_id}", response_model=ProjectOutput)
 def get_project(project_id: int, projects: Projects = Depends(Projects)) -> Project:
     return projects.get_project(project_id)
 
 
-@project_router.put("/projects/{project_id}", response_model=ProjectOutput)
+@router.put("/projects/{project_id}", response_model=ProjectOutput)
 def update_project(
     project_id: int, project_input: ProjectInput, projects: Projects = Depends(Projects)
 ) -> Project:
@@ -105,7 +105,7 @@ def update_project(
     return project
 
 
-@project_router.delete("/projects/{project_id}", status_code=204)
+@router.delete("/projects/{project_id}", status_code=204)
 def delete_project(project_id: int, projects: Projects = Depends(Projects)) -> None:
     project = projects.get_project(project_id)
     projects.delete_project(project)

@@ -23,7 +23,7 @@ from .utils import to_abs_path
 from . import database
 from .angular import AngularFiles
 from .config import load_config
-from .endpoints import project_router
+from .endpoints import projects
 
 config = load_config()
 app = FastAPI(
@@ -32,7 +32,7 @@ app = FastAPI(
     redoc_url=config.fastapi.redoc_url,
 )
 
-app.include_router(project_router, prefix="/api")
+app.include_router(projects.router, prefix="/api")
 app.mount("/", AngularFiles(directory=to_abs_path("htdocs"), html=True))
 app.add_middleware(
     CORSMiddleware,
