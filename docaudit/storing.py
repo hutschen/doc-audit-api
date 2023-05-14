@@ -15,6 +15,7 @@
 
 import os
 import threading
+from functools import lru_cache
 
 from haystack.document_stores.faiss import FAISSDocumentStore
 from haystack.nodes import BaseComponent, DenseRetriever
@@ -37,7 +38,8 @@ def delete_faiss_files():
             os.remove(filename)
 
 
-def create_or_load_faiss_document_store():
+@lru_cache()  # use lru_cache to avoid creating multiple instances of the document store
+def create_or_load_faiss_document_store() -> FAISSDocumentStore:
     if os.path.isfile(FAISS_INDEX_FILENAME) and os.path.isfile(FAISS_CONFIG_FILENAME):
         # Load existing index
         return FAISSDocumentStore.load(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
