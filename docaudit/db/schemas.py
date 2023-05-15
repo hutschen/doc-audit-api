@@ -17,53 +17,40 @@ from sqlalchemy import Column, Integer, String, Table, ForeignKey
 from sqlalchemy.orm import relationship
 from .connection import Base
 
-# Association table for the many-to-many relationship between Document and HaystackDocument
-document_haystackdocument_table = Table(
-    "document_haystackdocument",
-    Base.metadata,
-    Column("document_id", Integer, ForeignKey("document.id")),
-    Column("haystack_document_id", String, ForeignKey("haystack_document.hash_id")),
-)
-
-
-class Project(Base):
-    __tablename__ = "project"
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-
-    # Relationship to Document with cascade delete
-    documents = relationship(
-        "Document", back_populates="project", cascade="all, delete, delete-orphan"
-    )
-
 
 class Document(Base):
     __tablename__ = "document"
     id = Column(Integer, primary_key=True)
     title = Column(String, nullable=False)
-    language = Column(String, default="de", nullable=False)
 
-    # ForeignKey column pointing to Project
-    project_id = Column(Integer, ForeignKey("project.id"))
-
-    # Relationship to Project
-    project = relationship("Project", back_populates="documents", lazy="joined")
-
-    # Relationship to HaystackDocument
+    # Relationship to Label and HaystackDocument
+    labels = relationship(
+        "Label",
+        back_populates="document",
+        cascade="all, delete, delete-orphan",
+        lazy="joined",
+    )
     haystack_documents = relationship(
         "HaystackDocument",
-        secondary=document_haystackdocument_table,
-        back_populates="documents",
+        back_populates="document",
+        cascade="all, delete, delete-orphan",
+        lazy="joined",
     )
+
+
+class Label(Base):
+    __tablename__ = "label"
+    document_id = Column(Integer, ForeignKey("document.id"), primary_key=True)
+    name = Column(String, primary_key=True)
+
+    # Relationship to Document
+    document = relationship("Document", back_populates="labels")
 
 
 class HaystackDocument(Base):
     __tablename__ = "haystack_document"
-    hash_id = Column(String, primary_key=True)
+    document_id = Column(Integer, ForeignKey("document.id"), primary_key=True)
+    hash = Column(String, primary_key=True)
 
     # Relationship to Document
-    documents = relationship(
-        "Document",
-        secondary=document_haystackdocument_table,
-        back_populates="haystack_documents",
-    )
+    document = relationship("Document", back_populates="haystack_documents")
