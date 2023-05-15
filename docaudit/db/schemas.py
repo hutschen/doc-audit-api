@@ -15,7 +15,7 @@
 
 from sqlalchemy import Column, Integer, String, Table, ForeignKey
 from sqlalchemy.orm import relationship
-from .db.connection import Base
+from .connection import Base
 
 # Association table for the many-to-many relationship between Document and HaystackDocument
 document_haystackdocument_table = Table(

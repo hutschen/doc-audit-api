@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from ..db.connection import CRUDBase, delete_from_db, get_session, read_from_db
 from ..models import ProjectInput, ProjectOutput
-from ..schemas import Project
+from ..db.schemas import Project
 
 
 class Projects(CRUDBase):
