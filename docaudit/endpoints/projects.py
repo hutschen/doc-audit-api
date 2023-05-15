@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends
 
 from ..db.projects import ProjectManager
 from ..db.schemas import Project
-from ..models import ProjectInput, ProjectOutput
+from .models import ProjectInput, ProjectOutput
 
 router = APIRouter(tags=["projects"])
 

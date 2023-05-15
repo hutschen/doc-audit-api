@@ -19,7 +19,7 @@ from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models import ProjectInput
+from ..endpoints.models import ProjectInput
 from .connection import get_session
 from .operations import delete_from_db, modify_query, read_from_db
 from .schemas import Project

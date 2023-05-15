@@ -17,7 +17,7 @@ from typing import Any
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from docaudit.models import DocumentInput
+from docaudit.endpoints.models import DocumentInput
 
 from docaudit.db.schemas import Document, Project
 from .operations import modify_query, delete_from_db, read_from_db
