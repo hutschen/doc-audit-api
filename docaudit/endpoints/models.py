@@ -17,19 +17,18 @@ from typing import Literal
 from pydantic import BaseModel
 
 
-class ProjectInput(BaseModel):
+class LabelInput(BaseModel):
     name: str
 
 
-class ProjectOutput(ProjectInput):
+class LabelOutput(LabelInput):
     class Config:
         orm_mode = True
-
-    id: int
 
 
 class DocumentInput(BaseModel):
     title: str
+    labels: list[LabelInput] = []
     language: Literal["de", "en"] = "de"
 
 
@@ -38,4 +37,4 @@ class DocumentOutput(DocumentInput):
         orm_mode = True
 
     id: int
-    project: ProjectOutput
+    labels: LabelOutput
