@@ -30,8 +30,6 @@ class ProjectOutput(ProjectInput):
 
 class DocumentInput(BaseModel):
     title: str
-    version: str | None = None
-    author: str | None = None
     language: Literal["de", "en"] = "de"
 
 

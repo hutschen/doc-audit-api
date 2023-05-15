@@ -41,9 +41,7 @@ class Document(Base):
     __tablename__ = "document"
     id = Column(Integer, primary_key=True)
     title = Column(String, nullable=False)
-    version = Column(String)
-    author = Column(String)
-    language = Column(String)
+    language = Column(String, default="de", nullable=False)
 
     # ForeignKey column pointing to Project
     project_id = Column(Integer, ForeignKey("project.id"))
