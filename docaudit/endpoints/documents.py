@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from docaudit.models import DocumentInput
 
 from docaudit.schemas import Document, Project
-from ..database import CRUDBase, delete_from_db, get_session, read_from_db
+from ..db.connection import CRUDBase, delete_from_db, get_session, read_from_db
 
 
 class Documents(CRUDBase):

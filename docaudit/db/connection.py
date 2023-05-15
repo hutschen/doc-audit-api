@@ -25,7 +25,7 @@ from sqlalchemy.sql.expression import Select
 
 from docaudit.errors import NotFoundError
 
-from .config import DatabaseConfig
+from ..config import DatabaseConfig
 
 naming_convention = {
     "ix": "ix_%(column_0_label)s",

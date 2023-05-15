@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..database import CRUDBase, delete_from_db, get_session, read_from_db
+from ..db.connection import CRUDBase, delete_from_db, get_session, read_from_db
 from ..models import ProjectInput, ProjectOutput
 from ..schemas import Project
 

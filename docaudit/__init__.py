@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .utils import to_abs_path
 
-from . import database
+from .db import connection
 from .angular import AngularFiles
 from .config import load_config
 from .endpoints import projects
@@ -46,13 +46,13 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     # migration.migrate(config.database)
-    database.setup_connection(config.database)
-    database.create_all()
+    connection.setup_connection(config.database)
+    connection.create_all()
 
 
 @app.on_event("shutdown")
 def on_shutdown():
-    database.dispose_connection()
+    connection.dispose_connection()
 
 
 def serve():
