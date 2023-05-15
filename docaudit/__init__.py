@@ -18,12 +18,11 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .utils import to_abs_path
-
-from .db import connection
 from .angular import AngularFiles
 from .config import load_config
-from .endpoints import projects
+from .db import connection
+from .endpoints import documents, projects
+from .utils import to_abs_path
 
 config = load_config()
 app = FastAPI(
@@ -33,6 +32,7 @@ app = FastAPI(
 )
 
 app.include_router(projects.router, prefix="/api")
+app.include_router(documents.router, prefix="/api")
 app.mount("/", AngularFiles(directory=to_abs_path("htdocs"), html=True))
 app.add_middleware(
     CORSMiddleware,
