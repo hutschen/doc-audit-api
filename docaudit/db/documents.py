@@ -24,7 +24,7 @@ from .operations import modify_query, delete_from_db, read_from_db
 from .connection import get_session
 
 
-class Documents:
+class DocumentManager:
     def __init__(self, session: Session = Depends(get_session)) -> None:
         self.session = session
 
