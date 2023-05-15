@@ -17,7 +17,6 @@ from typing import Any
 from fastapi import APIRouter, Depends
 
 from ..db.documents import DocumentManager, get_document_filters
-from ..db.projects import ProjectManager
 from ..db.schemas import Document
 from .models import DocumentInput, DocumentOutput
 
@@ -32,17 +31,12 @@ def get_documents(
     return document_manager.list_documents(where_clauses)
 
 
-@router.post(
-    "/projects/{project_id}/documents", status_code=201, response_model=DocumentOutput
-)
+@router.post("/documents", status_code=201, response_model=DocumentOutput)
 def create_document(
-    project_id: int,
-    document: DocumentInput,
-    project_manager: ProjectManager = Depends(ProjectManager),
+    document_input: DocumentInput,
     document_manager: DocumentManager = Depends(DocumentManager),
 ) -> Document:
-    project = project_manager.get_project(project_id)
-    return document_manager.create_document(project, document)
+    return document_manager.create_document(document_input)
 
 
 @router.get("/documents/{document_id}", response_model=DocumentOutput)
