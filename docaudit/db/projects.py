@@ -25,7 +25,7 @@ from .operations import delete_from_db, modify_query, read_from_db
 from .schemas import Project
 
 
-class Projects:
+class ProjectManager:
     def __init__(self, session: Session = Depends(get_session)):
         self.session = session
 

@@ -15,7 +15,7 @@
 
 from fastapi import APIRouter, Depends
 
-from ..db.projects import Projects
+from ..db.projects import ProjectManager
 from ..db.schemas import Project
 from ..models import ProjectInput, ProjectOutput
 
@@ -23,32 +23,40 @@ router = APIRouter(tags=["projects"])
 
 
 @router.get("/projects", response_model=list[ProjectOutput])
-def get_projects(projects: Projects = Depends(Projects)) -> list[Project]:
-    return projects.list_projects()
+def get_projects(
+    project_manager: ProjectManager = Depends(ProjectManager),
+) -> list[Project]:
+    return project_manager.list_projects()
 
 
 @router.post("/projects", status_code=201, response_model=ProjectOutput)
 def create_project(
-    project: ProjectInput, projects: Projects = Depends(Projects)
+    project: ProjectInput, project_manager: ProjectManager = Depends(ProjectManager)
 ) -> Project:
-    return projects.create_project(project)
+    return project_manager.create_project(project)
 
 
 @router.get("/projects/{project_id}", response_model=ProjectOutput)
-def get_project(project_id: int, projects: Projects = Depends(Projects)) -> Project:
-    return projects.get_project(project_id)
+def get_project(
+    project_id: int, project_manager: ProjectManager = Depends(ProjectManager)
+) -> Project:
+    return project_manager.get_project(project_id)
 
 
 @router.put("/projects/{project_id}", response_model=ProjectOutput)
 def update_project(
-    project_id: int, project_input: ProjectInput, projects: Projects = Depends(Projects)
+    project_id: int,
+    project_input: ProjectInput,
+    project_manager: ProjectManager = Depends(ProjectManager),
 ) -> Project:
-    project = projects.get_project(project_id)
-    projects.update_project(project, project_input)
+    project = project_manager.get_project(project_id)
+    project_manager.update_project(project, project_input)
     return project
 
 
 @router.delete("/projects/{project_id}", status_code=204)
-def delete_project(project_id: int, projects: Projects = Depends(Projects)) -> None:
-    project = projects.get_project(project_id)
-    projects.delete_project(project)
+def delete_project(
+    project_id: int, project_manager: ProjectManager = Depends(ProjectManager)
+) -> None:
+    project = project_manager.get_project(project_id)
+    project_manager.delete_project(project)
