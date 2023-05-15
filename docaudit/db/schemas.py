@@ -22,19 +22,14 @@ class Document(Base):
     __tablename__ = "document"
     id = Column(Integer, primary_key=True)
     title = Column(String, nullable=False)
+    language = Column(String, default="de", nullable=False)
 
     # Relationship to Label and HaystackDocument
     _labels = relationship(
-        "Label",
-        back_populates="document",
-        cascade="all, delete, delete-orphan",
-        lazy="joined",
+        "Label", back_populates="document", cascade="all, delete, delete-orphan"
     )
     _haystack_hashes = relationship(
-        "HaystackHash",
-        back_populates="document",
-        cascade="all, delete, delete-orphan",
-        lazy="joined",
+        "HaystackHash", back_populates="document", cascade="all, delete, delete-orphan"
     )
 
     @property
