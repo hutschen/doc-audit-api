@@ -16,12 +16,12 @@
 from typing import Any
 
 from fastapi import Depends, Query
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..endpoints.models import DocumentInput
 from .connection import get_session
-from .filtering import filter_by_pattern, filter_by_values
+from .filtering import filter_by_pattern_many, filter_by_values_many, search_columns
 from .operations import delete_from_db, modify_query, read_from_db
 from .schemas import Document, Project
 
@@ -81,8 +81,6 @@ def get_document_filters(
     #
     # filter by values
     languages: list[str] | None = Query(None),
-    #
-    # filter by ids
     ids: list[int] | None = Query(None),
     project_ids: list[int] | None = Query(None),
     #
@@ -92,25 +90,19 @@ def get_document_filters(
     where_clauses = []
 
     # filter by pattern
-    for column, value in ((Document.title, title),):
-        if value:
-            where_clauses.append(filter_by_pattern(column, value))
+    where_clauses.extend(filter_by_pattern_many((Document.title, title)))
 
-    # filter by values or by ids
-    for column, values in (
-        (Document.id, ids),
-        (Document.language, languages),
-        (Document.project_id, project_ids),
-    ):
-        if values:
-            where_clauses.append(filter_by_values(column, values))
+    # filter by values
+    where_clauses.extend(
+        filter_by_values_many(
+            (Document.id, ids),
+            (Document.language, languages),
+            (Document.project_id, project_ids),
+        )
+    )
 
     # filter by search string
     if search:
-        where_clauses.append(
-            or_(
-                filter_by_pattern(column, f"*{search}*") for column in (Document.title,)
-            )
-        )
+        where_clauses.append(search_columns(search, Document.title))
 
     return where_clauses
