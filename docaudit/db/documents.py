@@ -20,8 +20,8 @@ from sqlalchemy.orm import Session
 from docaudit.models import DocumentInput
 
 from docaudit.db.schemas import Document, Project
-from ..db.operations import modify_query, delete_from_db, read_from_db
-from ..db.connection import get_session
+from .operations import modify_query, delete_from_db, read_from_db
+from .connection import get_session
 
 
 class Documents:
