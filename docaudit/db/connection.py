@@ -15,12 +15,15 @@
 
 from contextlib import contextmanager
 
+
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.engine.base import Engine
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from config import DatabaseConfig
+
+from ..config import DatabaseConfig
 
 naming_convention = {
     "ix": "ix_%(column_0_label)s",
@@ -30,7 +33,7 @@ naming_convention = {
     "pk": "pk_%(table_name)s",
 }
 
-metadata = MetaData(naming_convention=naming_convention)
+Base = declarative_base(metadata=MetaData(naming_convention=naming_convention))
 
 
 class __State:
@@ -71,7 +74,7 @@ def dispose_connection():
     __State.session_local = None
 
 
-@contextmanager
+# @contextmanager
 def get_session():
     if __State.session_local is None:
         raise RuntimeError("sessionmaker is not initialized")
@@ -91,11 +94,11 @@ def create_all():
     if __State.engine is None:
         raise RuntimeError("Engine is not initialized")
 
-    metadata.create_all(bind=__State.engine)
+    Base.metadata.create_all(bind=__State.engine)
 
 
 def drop_all():
     if __State.engine is None:
         raise RuntimeError("Engine is not initialized")
 
-    metadata.drop_all(bind=__State.engine)
+    Base.metadata.drop_all(bind=__State.engine)

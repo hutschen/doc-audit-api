@@ -13,25 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Literal
-from pydantic import BaseModel
+from typing import Any
+from fastapi import HTTPException
 
 
-class ProjectInput(BaseModel):
-    name: str
-
-
-class ProjectOutput(ProjectInput):
-    id: int
-
-
-class DocumentInput(BaseModel):
-    title: str
-    version: str | None = None
-    author: str | None = None
-    language: Literal["de", "en"] = "de"
-
-
-class DocumentOutput(DocumentInput):
-    id: int
-    project: ProjectOutput
+class NotFoundError(HTTPException):
+    def __init__(
+        self, detail: Any = None, headers: dict[str, Any] | None = None
+    ) -> None:
+        HTTPException.__init__(self, status_code=404, detail=detail, headers=headers)

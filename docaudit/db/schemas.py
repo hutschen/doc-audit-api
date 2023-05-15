@@ -15,9 +15,7 @@
 
 from sqlalchemy import Column, Integer, String, Table, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+from .connection import Base
 
 # Association table for the many-to-many relationship between Document and HaystackDocument
 document_haystackdocument_table = Table(
@@ -43,15 +41,13 @@ class Document(Base):
     __tablename__ = "document"
     id = Column(Integer, primary_key=True)
     title = Column(String, nullable=False)
-    version = Column(String)
-    author = Column(String)
-    language = Column(String)
+    language = Column(String, default="de", nullable=False)
 
     # ForeignKey column pointing to Project
     project_id = Column(Integer, ForeignKey("project.id"))
 
     # Relationship to Project
-    project = relationship("Project", back_populates="documents")
+    project = relationship("Project", back_populates="documents", lazy="joined")
 
     # Relationship to HaystackDocument
     haystack_documents = relationship(
@@ -70,6 +66,4 @@ class HaystackDocument(Base):
         "Document",
         secondary=document_haystackdocument_table,
         back_populates="haystack_documents",
-        # Cascade option to delete orphaned HaystackDocument instances
-        cascade="all, delete-orphan",
     )
