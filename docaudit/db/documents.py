@@ -23,7 +23,7 @@ from ..endpoints.models import DocumentInput
 from .connection import get_session
 from .filtering import filter_by_pattern_many, filter_by_values_many, search_columns
 from .operations import delete_from_db, modify_query, read_from_db
-from .schemas import Document, Project
+from .schemas import Document, Label
 
 
 class DocumentManager:
@@ -46,10 +46,10 @@ class DocumentManager:
         )
         return self.session.execute(query).scalars().all()
 
-    def create_document(
-        self, project: Project, creation: DocumentInput, flush: bool = True
-    ) -> Document:
-        document = Document(**creation.dict(), project=project)
+    def create_document(self, creation: DocumentInput, flush: bool = True) -> Document:
+        document = Document(**creation.dict(exclude={"labels"}))
+        document.labels = creation.labels
+
         self.session.add(document)
         if flush:
             self.session.flush()
@@ -68,6 +68,7 @@ class DocumentManager:
         # Update document
         for key, value in update.dict(exclude_unset=patch).items():
             setattr(document, key, value)
+
         if flush:
             self.session.flush()
 
@@ -82,7 +83,6 @@ def get_document_filters(
     # filter by values
     languages: list[str] | None = Query(None),
     ids: list[int] | None = Query(None),
-    project_ids: list[int] | None = Query(None),
     #
     # filter by search string
     search: str | None = None,
@@ -94,11 +94,7 @@ def get_document_filters(
 
     # filter by values
     where_clauses.extend(
-        filter_by_values_many(
-            (Document.id, ids),
-            (Document.language, languages),
-            (Document.project_id, project_ids),
-        )
+        filter_by_values_many((Document.id, ids), (Document.language, languages))
     )
 
     # filter by search string
