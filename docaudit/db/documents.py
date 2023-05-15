@@ -14,14 +14,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from typing import Any
-from fastapi import Depends
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-from docaudit.endpoints.models import DocumentInput
 
-from docaudit.db.schemas import Document, Project
-from .operations import modify_query, delete_from_db, read_from_db
+from fastapi import Depends, Query
+from sqlalchemy import or_, select
+from sqlalchemy.orm import Session
+
+from ..endpoints.models import DocumentInput
 from .connection import get_session
+from .filtering import filter_by_pattern, filter_by_values
+from .operations import delete_from_db, modify_query, read_from_db
+from .schemas import Document, Project
 
 
 class DocumentManager:
@@ -71,3 +73,44 @@ class DocumentManager:
 
     def delete_document(self, document: Document, flush: bool = True) -> None:
         delete_from_db(self.session, document, flush)
+
+
+def get_document_filters(
+    # filter by pattern
+    title: str | None = None,
+    #
+    # filter by values
+    languages: list[str] | None = Query(None),
+    #
+    # filter by ids
+    ids: list[int] | None = Query(None),
+    project_ids: list[int] | None = Query(None),
+    #
+    # filter by search string
+    search: str | None = None,
+) -> list[Any]:
+    where_clauses = []
+
+    # filter by pattern
+    for column, value in ((Document.title, title),):
+        if value:
+            where_clauses.append(filter_by_pattern(column, value))
+
+    # filter by values or by ids
+    for column, values in (
+        (Document.id, ids),
+        (Document.language, languages),
+        (Document.project_id, project_ids),
+    ):
+        if values:
+            where_clauses.append(filter_by_values(column, values))
+
+    # filter by search string
+    if search:
+        where_clauses.append(
+            or_(
+                filter_by_pattern(column, f"*{search}*") for column in (Document.title,)
+            )
+        )
+
+    return where_clauses

@@ -13,9 +13,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Any
 from fastapi import APIRouter, Depends
 
-from ..db.documents import DocumentManager
+from ..db.documents import DocumentManager, get_document_filters
 from ..db.projects import ProjectManager
 from ..db.schemas import Document
 from .models import DocumentInput, DocumentOutput
@@ -26,9 +27,9 @@ router = APIRouter(tags=["documents"])
 @router.get("/documents", response_model=list[DocumentOutput])
 def get_documents(
     document_manager: DocumentManager = Depends(DocumentManager),
-    # TODO: Add option to filter by project_id
+    where_clauses: list[Any] = Depends(get_document_filters),
 ) -> list[Document]:
-    return document_manager.list_documents()
+    return document_manager.list_documents(where_clauses)
 
 
 @router.post(
