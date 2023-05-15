@@ -20,10 +20,11 @@ from sqlalchemy.orm import Session
 from docaudit.models import DocumentInput
 
 from docaudit.db.schemas import Document, Project
-from ..db.connection import CRUDBase, delete_from_db, get_session, read_from_db
+from ..db.operations import modify_query, delete_from_db, read_from_db
+from ..db.connection import get_session
 
 
-class Documents(CRUDBase):
+class Documents:
     def __init__(self, session: Session = Depends(get_session)) -> None:
         self.session = session
 
@@ -34,7 +35,7 @@ class Documents(CRUDBase):
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Document]:
-        query = self._modify_query(
+        query = modify_query(
             select(Document),
             where_clauses,
             order_by_clauses or [Document.id],

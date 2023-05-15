@@ -19,12 +19,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..db.connection import CRUDBase, delete_from_db, get_session, read_from_db
-from ..models import ProjectInput, ProjectOutput
+from ..db.connection import get_session
+from ..db.operations import delete_from_db, modify_query, read_from_db
 from ..db.schemas import Project
+from ..models import ProjectInput, ProjectOutput
 
 
-class Projects(CRUDBase):
+class Projects:
     def __init__(self, session: Session = Depends(get_session)):
         self.session = session
 
@@ -36,7 +37,7 @@ class Projects(CRUDBase):
         limit: int | None = None,
     ) -> list[Project]:
         # Construct projects query
-        query = self._modify_query(
+        query = modify_query(
             select(Project),
             where_clauses,
             order_by_clauses or [Project.id],
