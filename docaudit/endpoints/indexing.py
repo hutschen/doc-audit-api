@@ -19,6 +19,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends
 
 from ..db.documents import DocumentManager
+from ..db.haystack_hashes import HaystackHashManager
 from ..errors import ClientError
 from ..ml.indexing import faiss_document_store_writer, index_docx
 from .models import DocumentOutput
@@ -46,9 +47,18 @@ def upload_and_index_docx(
     return document
 
 
-@router.delete("/documents/{document_id}/index", status_code=204)
-def unindex(document_id: int, document_manager: DocumentManager = Depends()):
+@router.put(
+    "/documents/{document_id}/index", status_code=200, response_model=DocumentOutput
+)
+def unindex(
+    document_id: int,
+    document_manager: DocumentManager = Depends(),
+    haystack_hash_manager: HaystackHashManager = Depends(),
+):
     document = document_manager.get_document(document_id)
-    faiss_document_store_writer.delete_documents(document.haystack_hashes)
+    single_linked_hashes = haystack_hash_manager.get_single_linked_hashes(document_id)
+    faiss_document_store_writer.delete_documents(single_linked_hashes)
+
     document.haystack_hashes = []
     document_manager.session.flush()
+    return document
