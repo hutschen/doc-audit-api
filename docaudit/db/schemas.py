@@ -54,6 +54,10 @@ class Document(Base):
             existing_hashes.get(hash, HaystackHash(hash=hash)) for hash in hashes
         ]
 
+    @property
+    def is_indexed(self) -> bool:
+        return 0 < len(self.haystack_hashes)
+
 
 class Label(Base):
     __tablename__ = "label"

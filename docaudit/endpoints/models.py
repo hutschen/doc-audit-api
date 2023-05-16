@@ -28,3 +28,4 @@ class DocumentOutput(DocumentInput):
         orm_mode = True
 
     id: int
+    is_indexed: bool
