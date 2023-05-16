@@ -23,7 +23,7 @@ from ..endpoints.models import DocumentInput
 from .connection import get_session
 from .filtering import filter_by_pattern_many, filter_by_values_many, search_columns
 from .operations import delete_from_db, modify_query, read_from_db
-from .schemas import Document, Label
+from .schemas import Document
 
 
 class DocumentManager:
