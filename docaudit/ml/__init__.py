@@ -12,18 +12,3 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
-from docaudit.ml.indexing import index_docx
-from docaudit.ml.querying import query
-
-index_docx(["tests/data/test.docx"], language="de")
-
-if __name__ == "__main__":
-    while True:
-        for document in query(input("Please enter query: ")):
-            # fmt: off
-            headers = ", ".join(document.meta.get("headers", []))
-            print(f"Headers: {headers}\nText: {document.content} (Score: {document.score})")
-            print("-" * 100)
-            # fmt: on
