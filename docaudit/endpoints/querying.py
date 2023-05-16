@@ -13,31 +13,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Literal
-from pydantic import BaseModel
+
+from fastapi import APIRouter
+from haystack.schema import Document
+
+from ..endpoints.models import ResultOutput
+from ..ml.querying import query
 
 
-class DocumentInput(BaseModel):
-    title: str
-    labels: list[str] = []
-    language: Literal["de", "en"] = "de"
+router = APIRouter(tags=["querying"])
 
 
-class DocumentOutput(DocumentInput):
-    class Config:
-        orm_mode = True
-
-    id: int
-    is_indexed: bool
-
-
-class ResultMetaOutput(BaseModel):
-    language: str
-    headers: list[str]
-
-
-class ResultOutput(BaseModel):
-    id: str
-    score: float
-    content: str
-    meta: ResultMetaOutput
+@router.get("/query", response_model=list[ResultOutput])
+def run_query(query_: str, top_k: int = 3) -> list[Document]:
+    return query(query_, top_k=top_k)
