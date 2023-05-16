@@ -84,3 +84,10 @@ class FAISSDocumentStoreWriter(BaseComponent):
         raise NotImplementedError(
             "run_batch is not implemented for FAISSDocumentStoreWriter"
         )
+
+    def delete_documents(self, ids: list[str]):
+        if not ids:
+            return
+
+        with self._write_lock:
+            self.document_store.delete_documents(ids=ids)
