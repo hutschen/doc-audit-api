@@ -54,13 +54,6 @@ def create_or_load_faiss_document_store() -> FAISSDocumentStore:
         )
 
 
-def update_and_save_embeddings(
-    document_store: FAISSDocumentStore, retriever: DenseRetriever
-):
-    document_store.update_embeddings(retriever, update_existing_embeddings=False)
-    document_store.save(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
-
-
 class FAISSDocumentStoreWriter(BaseComponent):
     outgoing_edges = 1
     _write_lock = threading.Lock()
@@ -77,7 +70,12 @@ class FAISSDocumentStoreWriter(BaseComponent):
         with self._write_lock:
             self.document_store.write_documents(documents, duplicate_documents="skip")
             if self.retriever is not None:
-                update_and_save_embeddings(self.document_store, self.retriever)
+                # Update and save embeddings
+                self.document_store.update_embeddings(
+                    self.retriever, update_existing_embeddings=False
+                )
+                self.document_store.save(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
+
         return {"documents": documents, **kwargs}, "output_1"
 
     def run_batch(self, **kwargs):
@@ -91,3 +89,4 @@ class FAISSDocumentStoreWriter(BaseComponent):
 
         with self._write_lock:
             self.document_store.delete_documents(ids=ids)
+            self.document_store.save(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
