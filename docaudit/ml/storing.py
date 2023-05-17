@@ -51,6 +51,7 @@ def create_or_load_faiss_document_store() -> FAISSDocumentStore:
             faiss_index_factory_str="Flat",
             duplicate_documents="skip",
             embedding_dim=1024,
+            similarity="cosine",
         )
 
 
