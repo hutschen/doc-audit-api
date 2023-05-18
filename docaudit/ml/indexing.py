@@ -56,7 +56,7 @@ class IndexingManager:
         self,
         file_path: str,
         language: Literal["de", "en"] | None = None,
-        index: str = "index",
+        index: str | None = None,
         file_id: int | None = None,
     ) -> list[Document]:
         results = self.pipeline.run(
@@ -65,5 +65,6 @@ class IndexingManager:
                 **({"language": language} if language else {}),
                 **({"file_id": file_id} if file_id is not None else {}),
             },
+            params={"DocumentStoreWriter": {"index": index}},
         )
         return results.get("documents", []) if results else []

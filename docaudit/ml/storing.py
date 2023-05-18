@@ -67,13 +67,15 @@ class FAISSDocumentStoreWriter(BaseComponent):
         self.document_store = document_store
         self.retriever = retriever
 
-    def run(self, *, documents: list[Document], **kwargs):
+    def run(self, *, documents: list[Document], index: str | None = None, **kwargs):
         with self._write_lock:
-            self.document_store.write_documents(documents, duplicate_documents="skip")
+            self.document_store.write_documents(
+                documents, index=index, duplicate_documents="skip"
+            )
             if self.retriever is not None:
                 # Update and save embeddings
                 self.document_store.update_embeddings(
-                    self.retriever, update_existing_embeddings=False
+                    self.retriever, index=index, update_existing_embeddings=False
                 )
                 self.document_store.save(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
 
