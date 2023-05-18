@@ -19,3 +19,15 @@ import os
 def to_abs_path(file_path: str) -> str:
     current_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(current_dir, "..", file_path)
+
+
+def cache_first_result(func):
+    cache = []  # Use a list instead of a variable because of Python scoping rules
+
+    def wrapper(*args, **kwargs):
+        if not cache:
+            result = func(*args, **kwargs)
+            cache.append(result)
+        return cache[0]
+
+    return wrapper
