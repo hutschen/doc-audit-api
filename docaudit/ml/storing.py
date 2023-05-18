@@ -13,49 +13,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from contextlib import contextmanager
 import os
 import threading
+from contextlib import contextmanager
+from functools import lru_cache
 
 from haystack.document_stores.faiss import FAISSDocumentStore
 from haystack.nodes import BaseComponent, EmbeddingRetriever
 from haystack.schema import Document
 
-from ..utils import cache_first_result, to_abs_path
-from .retrieving import create_embedding_retriever
-
-FAISS_DOCUMENT_STORE_FILENAME = to_abs_path("faiss/faiss_document_store.db")
-FAISS_INDEX_FILENAME = to_abs_path("faiss/faiss_index.faiss")
-FAISS_CONFIG_FILENAME = to_abs_path("faiss/faiss_config.json")
+from ..utils import to_abs_path
 
 
-def delete_faiss_files():
-    for filename in [
-        FAISS_DOCUMENT_STORE_FILENAME,
-        FAISS_INDEX_FILENAME,
-        FAISS_CONFIG_FILENAME,
-    ]:
-        if os.path.isfile(filename):
-            os.remove(filename)
-
-
-@cache_first_result
-def create_or_load_faiss_document_store() -> FAISSDocumentStore:
-    if os.path.isfile(FAISS_INDEX_FILENAME) and os.path.isfile(FAISS_CONFIG_FILENAME):
-        # Load existing index
-        return FAISSDocumentStore.load(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
-    else:
-        # Create new index
-        delete_faiss_files()
-        return FAISSDocumentStore(
-            sql_url=f"sqlite:///{FAISS_DOCUMENT_STORE_FILENAME}",
-            faiss_index_factory_str="Flat",
-            duplicate_documents="skip",
-            embedding_dim=1024,
-            similarity="cosine",
-        )
-
-
+# TODO: Make this thread-safe using a read-write lock
 class GroupDocumentStore:
     FAISS_DIRNAME = to_abs_path("faiss")
 
@@ -163,48 +133,6 @@ class MultiGroupDocumentStore(BaseComponent):
             return document_store.query_by_embedding(*args, **kwargs)
 
 
-class FAISSDocumentStoreWriter(BaseComponent):
-    outgoing_edges = 1
-    _write_lock = threading.Lock()
-
-    def __init__(
-        self,
-        document_store: FAISSDocumentStore,
-        retriever: EmbeddingRetriever | None = None,
-    ):
-        self.document_store = document_store
-        self.retriever = retriever
-
-    def run(self, *, documents: list[Document], index: str | None = None, **kwargs):
-        with self._write_lock:
-            self.document_store.write_documents(
-                documents, index=index, duplicate_documents="skip"
-            )
-            if self.retriever is not None:
-                # Update and save embeddings
-                self.document_store.update_embeddings(
-                    self.retriever, index=index, update_existing_embeddings=False
-                )
-                self.document_store.save(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
-
-        return {"documents": documents, **kwargs}, "output_1"
-
-    def run_batch(self, **_):
-        raise NotImplementedError(
-            "run_batch is not implemented for FAISSDocumentStoreWriter"
-        )
-
-    def delete_documents(self, index: str, file_id: int | None = None):
-        with self._write_lock:
-            self.document_store.delete_documents(
-                index=index,
-                filters={"file_id": [file_id]} if file_id is not None else None,
-            )
-            self.document_store.save(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
-
-
-@cache_first_result
-def get_faiss_document_store_writer():
-    faiss_document_store = create_or_load_faiss_document_store()
-    embedding_retriever = create_embedding_retriever()
-    return FAISSDocumentStoreWriter(faiss_document_store, embedding_retriever)
+@lru_cache()
+def get_multi_group_document_store():
+    return MultiGroupDocumentStore()
