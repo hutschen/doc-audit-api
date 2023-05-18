@@ -43,11 +43,16 @@ indexing_pipeline.add_node(component=faiss_document_store_writer, name="Document
 # fmt: on
 
 
-def index_docx(
-    file_paths: list[str], language: Literal["de", "en"] | None = None
+def index_docx_file(
+    file_path: str,
+    language: Literal["de", "en"] | None = None,
+    file_id: int | None = None,
 ) -> list[Document]:
     results = indexing_pipeline.run(
-        file_paths=file_paths,
-        meta={"language": language} if language else None,
+        file_paths=[file_path],
+        meta={
+            **({"language": language} if language else {}),
+            **({"file_id": file_id} if file_id is not None else {}),
+        },
     )
     return results.get("documents", []) if results else []
