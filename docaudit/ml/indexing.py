@@ -15,27 +15,23 @@
 
 from typing import Literal
 
-from fastapi import Depends
 from haystack import Pipeline
 from haystack.schema import Document
 
 from ..utils import cache_first_result
 from .parsing import DocxParser
 from .preprocessing import LanguageDispatcher, create_preprocessor
-from .retrieving import create_embedding_retriever
-from .storing import FAISSDocumentStoreWriter, create_or_load_faiss_document_store
+from .storing import get_faiss_document_store_writer
 
 
 @cache_first_result
-def create_indexing_pipeline():
+def get_indexing_pipeline():
     # fmt: off
     docx_parser = DocxParser()
     language_dispatcher = LanguageDispatcher()
     preprocessor_de = create_preprocessor(language="de")
     preprocessor_en = create_preprocessor(language="en")
-    embedding_retriever = create_embedding_retriever()
-    faiss_document_store = create_or_load_faiss_document_store()
-    faiss_document_store_writer = FAISSDocumentStoreWriter(faiss_document_store, embedding_retriever)
+    faiss_document_store_writer = get_faiss_document_store_writer()
     
     indexing_pipeline = Pipeline()
     indexing_pipeline.add_node(component=docx_parser, name="DocxParser", inputs=["File"])
