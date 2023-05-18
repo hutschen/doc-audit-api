@@ -15,12 +15,13 @@
 
 from typing import Any
 
-from fastapi import Depends
+from fastapi import Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..endpoints.models import GroupInput
 from .connection import get_session
+from .filtering import filter_by_pattern_many, filter_by_values_many, search_columns
 from .operations import delete_from_db, modify_query, read_from_db
 from .schemas import Group
 
@@ -66,3 +67,28 @@ class GroupManager:
 
     def delete_group(self, group: Group, flush: bool = True) -> None:
         delete_from_db(self.session, group, flush)
+
+
+def get_group_filters(
+    # filter by pattern
+    name: str | None = None,
+    #
+    # filter by values
+    ids: list[int] | None = Query(None),
+    #
+    # filter by search string
+    search: str | None = None,
+) -> list[Any]:
+    where_clauses = []
+
+    # filter by pattern
+    where_clauses.extend(filter_by_pattern_many((Group.name, name)))
+
+    # filter by values
+    where_clauses.extend(filter_by_values_many((Group.id, ids)))
+
+    # filter by search string
+    if search:
+        where_clauses.append(search_columns(search, Group.name))
+
+    return where_clauses
