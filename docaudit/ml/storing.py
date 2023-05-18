@@ -17,7 +17,7 @@ import os
 import threading
 
 from haystack.document_stores.faiss import FAISSDocumentStore
-from haystack.nodes import BaseComponent, DenseRetriever
+from haystack.nodes import BaseComponent, EmbeddingRetriever
 from haystack.schema import Document
 
 from ..utils import cache_first_result, to_abs_path
@@ -55,6 +55,76 @@ def create_or_load_faiss_document_store() -> FAISSDocumentStore:
         )
 
 
+class FAISSDocumentStoreWrapper:
+    FAISS_DIRNAME = to_abs_path("faiss")
+    DOCUMENT_DB_FILENAME = to_abs_path("document.db")
+    FAISS_INDEX_FILENAME = to_abs_path("faiss_index.faiss")
+
+    def __init__(self, index: str):
+        # fmt: off
+        self._db_filename = os.path.join(self.FAISS_DIRNAME, index, self.DOCUMENT_DB_FILENAME)
+        self._index_filename = os.path.join(self.FAISS_DIRNAME, index, self.FAISS_INDEX_FILENAME)
+        # fmt: on
+
+        self.document_store = self._create_or_load_document_store()
+        self._write_lock = threading.Lock()
+
+    def _delete_files(self):
+        for filename in [self._db_filename, self._index_filename]:
+            if os.path.isfile(filename):
+                os.remove(filename)
+
+    def _create_or_load_document_store(self) -> FAISSDocumentStore:
+        config = dict(
+            sql_url=f"sqlite:///{FAISS_DOCUMENT_STORE_FILENAME}",
+            faiss_index_factory_str="Flat",
+            duplicate_documents="skip",
+            embedding_dim=1024,
+            similarity="cosine",
+        )
+
+        if os.path.isfile(self._index_filename) and os.path.isfile(self._db_filename):
+            # Load existing document store
+            return FAISSDocumentStore.load(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
+        else:
+            # Create new document store
+            self._delete_files()
+            return FAISSDocumentStore(
+                faiss_index_path=self._index_filename,
+                **config,
+            )
+
+    def write_documents(
+        self, documents: list[Document], retriever: EmbeddingRetriever | None = None
+    ) -> list[Document]:
+        with self._write_lock:
+            self.document_store.write_documents(documents, duplicate_documents="skip")
+            if retriever:
+                # Update and save embeddings
+                self.document_store.update_embeddings(
+                    retriever, update_existing_embeddings=False
+                )
+                self.document_store.save(self._index_filename)
+            return documents
+
+    def delete_documents(self, file_id: int | None = None):
+        with self._write_lock:
+            self.document_store.delete_documents(
+                filters={"file_id": [file_id]} if file_id is not None else None,
+            )
+            self.document_store.save(self._index_filename)
+
+    @property
+    def index(self):
+        """Property is used in EmbeddingRetriever.retrieve"""
+        return self.document_store.index
+
+    def query_by_embedding(self, *args, **kwargs):
+        """Method is used in EmbeddingRetriever.retrieve"""
+        # TODO: Check if this is thread-safe (probably not) / use read lock
+        return self.document_store.query_by_embedding(*args, **kwargs)
+
+
 class FAISSDocumentStoreWriter(BaseComponent):
     outgoing_edges = 1
     _write_lock = threading.Lock()
@@ -62,7 +132,7 @@ class FAISSDocumentStoreWriter(BaseComponent):
     def __init__(
         self,
         document_store: FAISSDocumentStore,
-        retriever: DenseRetriever | None = None,
+        retriever: EmbeddingRetriever | None = None,
     ):
         self.document_store = document_store
         self.retriever = retriever
