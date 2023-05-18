@@ -31,7 +31,6 @@ class GroupOutput(GroupInput):
 class DocumentInput(BaseModel):
     title: str
     language: Literal["de", "en"] = "de"
-    category: str | None = None
 
 
 class DocumentOutput(DocumentInput):
