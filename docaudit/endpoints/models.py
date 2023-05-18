@@ -17,10 +17,21 @@ from typing import Literal
 from pydantic import BaseModel
 
 
+class GroupInput(BaseModel):
+    name: str
+
+
+class GroupOutput(GroupInput):
+    class Config:
+        orm_mode = True
+
+    id: int
+
+
 class DocumentInput(BaseModel):
     title: str
-    labels: list[str] = []
     language: Literal["de", "en"] = "de"
+    category: str | None = None
 
 
 class DocumentOutput(DocumentInput):
@@ -28,7 +39,6 @@ class DocumentOutput(DocumentInput):
         orm_mode = True
 
     id: int
-    is_indexed: bool
 
 
 class ResultMetaOutput(BaseModel):
