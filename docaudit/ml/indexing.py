@@ -45,8 +45,9 @@ def get_indexing_pipeline():
 
 
 class IndexingManager:
-    def __init__(self, indexing_pipeline: Pipeline = Depends(create_indexing_pipeline)):
-        self.pipeline = indexing_pipeline
+    def __init__(self):
+        self.pipeline = get_indexing_pipeline()
+        self.faiss_document_store_writer = get_faiss_document_store_writer()
 
     def index_docx_file(
         self,
@@ -64,3 +65,6 @@ class IndexingManager:
             params={"DocumentStoreWriter": {"index": index}},
         )
         return results.get("documents", []) if results else []
+
+    def unindex(self, index: str, file_id: int) -> None:
+        self.faiss_document_store_writer.delete_documents(index=index, file_id=file_id)
