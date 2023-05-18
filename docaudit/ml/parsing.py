@@ -22,64 +22,64 @@ from haystack.nodes import BaseComponent
 from haystack.schema import Document
 
 
-def parse_level(paragraph: Paragraph) -> int | None:
-    style = paragraph.style.name
-    match = re.search(r"Heading (\d+)", style)
-    if match:
-        return int(match.group(1))
-    return None
+class DocxParser(BaseComponent):
+    outgoing_edges = 1
 
+    @staticmethod
+    def _parse_level(paragraph: Paragraph) -> int | None:
+        style = paragraph.style.name
+        match = re.search(r"Heading (\d+)", style)
+        if match:
+            return int(match.group(1))
+        return None
 
-def modify_headers(paragraph, headers: list[str]) -> bool:
-    level = parse_level(paragraph)
-    if level is None:
-        return False
+    @classmethod
+    def _modify_headers(cls, paragraph, headers: list[str]) -> bool:
+        level = cls._parse_level(paragraph)
+        if level is None:
+            return False
 
-    if len(headers) < level:
+        if len(headers) < level:
+            headers.append(paragraph.text)
+            return True
+
+        while len(headers) > level:
+            headers.pop()
+
+        # len(headers) == level
+        headers.pop()
         headers.append(paragraph.text)
         return True
 
-    while len(headers) > level:
-        headers.pop()
+    @staticmethod
+    def _to_document(headers, content, meta: dict | None = None) -> Document:
+        return Document(
+            # Combine meta and headers into one meta dict
+            meta={
+                **(meta or {}),
+                "headers": headers,
+            },
+            content=content[:-2],
+            id_hash_keys=["meta", "content"],
+        )
 
-    # len(headers) == level
-    headers.pop()
-    headers.append(paragraph.text)
-    return True
+    @classmethod
+    def _parse_docx(cls, filename: str, meta: dict | None = None) -> Iterator[Document]:
+        headers = []
+        content = ""
+        for paragraph in docx.Document(filename).paragraphs:
+            prev_headers = headers.copy()
+            if cls._modify_headers(paragraph, headers):
+                # New section started, yield the previous section
+                yield cls._to_document(prev_headers, content, meta)
 
+                # Start with a new section
+                content = paragraph.text + "\n" * 2
+            else:
+                # Continue with current section
+                content += paragraph.text + "\n" * 2
 
-def to_haystack_document(headers, content, meta: dict | None = None) -> Document:
-    return Document(
-        # Combine meta and headers into one meta dict
-        meta={
-            **(meta or {}),
-            "headers": headers,
-        },
-        content=content[:-2],
-        id_hash_keys=["meta", "content"],
-    )
-
-
-def parse_docx(filename: str, meta: dict | None = None) -> Iterator[Document]:
-    headers = []
-    content = ""
-    for paragraph in docx.Document(filename).paragraphs:
-        prev_headers = headers.copy()
-        if modify_headers(paragraph, headers):
-            # New section started, yield the previous section
-            yield to_haystack_document(prev_headers, content, meta)
-
-            # Start with a new section
-            content = paragraph.text + "\n" * 2
-        else:
-            # Continue with current section
-            content += paragraph.text + "\n" * 2
-
-    yield to_haystack_document(headers, content, meta)
-
-
-class DocxParser(BaseComponent):
-    outgoing_edges = 1
+        yield cls._to_document(headers, content, meta)
 
     def __init__(self):
         pass
@@ -87,9 +87,9 @@ class DocxParser(BaseComponent):
     def run(self, *, file_paths: List[str], meta: dict | None = None, **kwargs):
         documents = []
         for file_path in file_paths:
-            documents.extend(parse_docx(file_path, meta))
+            documents.extend(self._parse_docx(file_path, meta))
         output = {"documents": documents, **kwargs}
         return output, "output_1"
 
-    def run_batch(self, **kwargs):
+    def run_batch(self, **_):
         raise NotImplementedError("run_batch is not implemented for DocxParser")
