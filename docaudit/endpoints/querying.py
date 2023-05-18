@@ -14,16 +14,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from haystack.schema import Document
 
+from ..db.groups import GroupManager
 from ..endpoints.models import ResultOutput
 from ..ml.querying import query
-
 
 router = APIRouter(tags=["querying"])
 
 
-@router.get("/query", response_model=list[ResultOutput])
-def run_query(query_: str, top_k: int = 3) -> list[Document]:
-    return query(query_, top_k=top_k)
+@router.get("/groups/{group_id}/query", response_model=list[ResultOutput])
+def run_query(
+    content: str, group_id: int, top_k: int = 3, group_manager: GroupManager = Depends()
+) -> list[Document]:
+    group = group_manager.get_group(group_id)
+    return query(content, index=str(group.id), top_k=top_k)

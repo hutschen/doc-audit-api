@@ -28,8 +28,8 @@ querying_pipeline.add_node(component=embedding_retriever, name="EmbeddingRetriev
 # fmt: on
 
 
-def query(query: str, top_k: int = 3) -> list[Document]:
+def query(query: str, index: str | None = None, top_k: int = 3) -> list[Document]:
     results = querying_pipeline.run(
-        query=query, params={"EmbeddingRetriever": {"top_k": top_k}}
+        query=query, params={"EmbeddingRetriever": {"top_k": top_k, "index": index}}
     )
     return results.get("documents", []) if results else []
