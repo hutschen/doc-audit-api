@@ -12,3 +12,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+
+# Run transformers in offline mode, see https://huggingface.co/docs/transformers/installation#offline-mode
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+os.environ["HF_DATASETS_OFFLINE"] = "1"
