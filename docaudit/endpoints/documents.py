@@ -13,8 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Any
+from typing import Any, Literal, cast
 from fastapi import APIRouter, Depends
+from docaudit.db.groups import GroupManager
+
+from ..endpoints.temp_file import copy_upload_to_temp_file
+from ..ml.indexing import index_docx_file, faiss_document_store_writer
 
 from ..db.documents import DocumentManager, get_document_filters
 from ..db.schemas import Document
@@ -33,10 +37,24 @@ def get_documents(
 
 @router.post("/documents", status_code=201, response_model=DocumentOutput)
 def create_document(
-    document_input: DocumentInput,
-    document_manager: DocumentManager = Depends(DocumentManager),
+    title: str,
+    language: Literal["de", "en"] = "de",
+    group_id: int = 1,
+    temp_file: Any = Depends(copy_upload_to_temp_file),
+    group_manager: GroupManager = Depends(),
+    document_manager: DocumentManager = Depends(),
 ) -> Document:
-    return document_manager.create_document(document_input)
+    document = document_manager.create_document(
+        group_manager.get_group(group_id),
+        DocumentInput(title=title, language=language),
+    )
+    index_docx_file(
+        temp_file.name,
+        language,
+        index=str(group_id),
+        file_id=cast(int, document.id),
+    )
+    return document
 
 
 @router.get("/documents/{document_id}", response_model=DocumentOutput)
@@ -62,4 +80,5 @@ def delete_document(
     document_id: int, document_manager: DocumentManager = Depends(DocumentManager)
 ) -> None:
     document = document_manager.get_document(document_id)
+    faiss_document_store_writer.delete_documents(document.id)  # type: ignore
     document_manager.delete_document(document)
