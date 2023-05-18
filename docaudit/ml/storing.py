@@ -81,15 +81,15 @@ class FAISSDocumentStoreWriter(BaseComponent):
 
         return {"documents": documents, **kwargs}, "output_1"
 
-    def run_batch(self, **kwargs):
+    def run_batch(self, **_):
         raise NotImplementedError(
             "run_batch is not implemented for FAISSDocumentStoreWriter"
         )
 
-    def delete_documents(self, file_id: int | None = None):
-        if file_id is None:
-            return
-
+    def delete_documents(self, index: str, file_id: int | None = None):
         with self._write_lock:
-            self.document_store.delete_documents(filters={"file_id": [file_id]})
+            self.document_store.delete_documents(
+                index=index,
+                filters={"file_id": [file_id]} if file_id is not None else None,
+            )
             self.document_store.save(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
