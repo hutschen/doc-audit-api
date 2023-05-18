@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends
 from docaudit.db.groups import GroupManager
 
 from ..endpoints.temp_file import copy_upload_to_temp_file
-from ..ml.indexing import index_docx_file, faiss_document_store_writer
+from ..ml.indexing import IndexingManager
 
 from ..db.documents import DocumentManager, get_document_filters
 from ..db.schemas import Document
@@ -43,12 +43,13 @@ def create_document(
     temp_file: Any = Depends(copy_upload_to_temp_file),
     group_manager: GroupManager = Depends(),
     document_manager: DocumentManager = Depends(),
+    indexing_manager: IndexingManager = Depends(),
 ) -> Document:
     document = document_manager.create_document(
         group_manager.get_group(group_id),
         DocumentInput(title=title, language=language),
     )
-    index_docx_file(
+    indexing_manager.index_docx_file(
         temp_file.name,
         language,
         index=str(group_id),
