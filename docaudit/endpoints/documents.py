@@ -35,11 +35,13 @@ def get_documents(
     return document_manager.list_documents(where_clauses)
 
 
-@router.post("/documents", status_code=201, response_model=DocumentOutput)
+@router.post(
+    "groups/{group_id}/documents", status_code=201, response_model=DocumentOutput
+)
 def create_document(
+    group_id: int,
     title: str,
     language: Literal["de", "en"] = "de",
-    group_id: int = 1,
     temp_file: Any = Depends(copy_upload_to_temp_file),
     group_manager: GroupManager = Depends(),
     document_manager: DocumentManager = Depends(),
