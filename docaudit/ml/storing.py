@@ -15,13 +15,13 @@
 
 import os
 import threading
-from functools import lru_cache
 
 from haystack.document_stores.faiss import FAISSDocumentStore
 from haystack.nodes import BaseComponent, DenseRetriever
 from haystack.schema import Document
 
-from ..utils import to_abs_path
+from ..utils import cache_first_result, to_abs_path
+from .retrieving import create_embedding_retriever
 
 FAISS_DOCUMENT_STORE_FILENAME = to_abs_path("faiss/faiss_document_store.db")
 FAISS_INDEX_FILENAME = to_abs_path("faiss/faiss_index.faiss")
@@ -38,7 +38,7 @@ def delete_faiss_files():
             os.remove(filename)
 
 
-@lru_cache()  # use lru_cache to avoid creating multiple instances of the document store
+@cache_first_result
 def create_or_load_faiss_document_store() -> FAISSDocumentStore:
     if os.path.isfile(FAISS_INDEX_FILENAME) and os.path.isfile(FAISS_CONFIG_FILENAME):
         # Load existing index
@@ -93,3 +93,10 @@ class FAISSDocumentStoreWriter(BaseComponent):
                 filters={"file_id": [file_id]} if file_id is not None else None,
             )
             self.document_store.save(FAISS_INDEX_FILENAME, FAISS_CONFIG_FILENAME)
+
+
+@cache_first_result
+def get_faiss_document_store_writer():
+    faiss_document_store = create_or_load_faiss_document_store()
+    embedding_retriever = create_embedding_retriever()
+    return FAISSDocumentStoreWriter(faiss_document_store, embedding_retriever)
