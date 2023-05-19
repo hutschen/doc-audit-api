@@ -14,9 +14,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import Any, Generator, cast
 from fastapi import APIRouter, Depends
 from haystack.schema import Document
 
+from ..db.documents import DocumentManager
 from ..db.groups import GroupManager
 from ..endpoints.models import ResultOutput
 from ..ml.querying import query
@@ -26,7 +28,19 @@ router = APIRouter(tags=["querying"])
 
 @router.get("/groups/{group_id}/query", response_model=list[ResultOutput])
 def run_query(
-    content: str, group_id: int, top_k: int = 3, group_manager: GroupManager = Depends()
-) -> list[Document]:
+    content: str,
+    group_id: int,
+    top_k: int = 3,
+    group_manager: GroupManager = Depends(),
+    document_manager: DocumentManager = Depends(),
+) -> Generator[ResultOutput, Any, None]:
     group = group_manager.get_group(group_id)
-    return query(content, index=str(group.id), top_k=top_k)
+    haystack_documents = query(content, index=str(group.id), top_k=top_k)
+    for haystack_document in haystack_documents:
+        yield ResultOutput(
+            id=haystack_document.id,
+            score=cast(float, haystack_document.score),
+            content=cast(str, haystack_document.content),
+            headers=haystack_document.meta.get("headers", []),
+            document=document_manager.get_document(haystack_document.meta["file_id"]),
+        )

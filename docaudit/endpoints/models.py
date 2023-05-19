@@ -41,13 +41,9 @@ class DocumentOutput(DocumentInput):
     group: GroupOutput
 
 
-class ResultMetaOutput(BaseModel):
-    language: str
-    headers: list[str]
-
-
 class ResultOutput(BaseModel):
     id: str
     score: float
     content: str
-    meta: ResultMetaOutput
+    headers: list[str]
+    document: DocumentOutput
