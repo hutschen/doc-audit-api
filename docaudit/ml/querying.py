@@ -16,11 +16,11 @@
 from haystack import Pipeline
 from haystack.schema import Document
 
-from .retrieving import create_embedding_retriever
-from .storing import create_or_load_faiss_document_store
+from .retrieving import get_embedding_retriever
+from .storing import get_multi_document_store
 
-faiss_document_store = create_or_load_faiss_document_store()
-embedding_retriever = create_embedding_retriever(faiss_document_store)
+embedding_retriever = get_embedding_retriever()
+embedding_retriever.document_store = get_multi_document_store()  # type: ignore
 
 # fmt: off
 querying_pipeline = Pipeline()
@@ -30,6 +30,7 @@ querying_pipeline.add_node(component=embedding_retriever, name="EmbeddingRetriev
 
 def query(query: str, index: str | None = None, top_k: int = 3) -> list[Document]:
     results = querying_pipeline.run(
-        query=query, params={"EmbeddingRetriever": {"top_k": top_k, "index": index}}
+        query=query,
+        params={"EmbeddingRetriever": {"top_k": top_k, "index": index}},
     )
     return results.get("documents", []) if results else []
