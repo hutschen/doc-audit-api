@@ -49,13 +49,13 @@ def get_indexing_pipeline():
 class IndexingManager:
     def __init__(self):
         self.pipeline = get_indexing_pipeline()
-        self.faiss_document_store_writer = get_faiss_document_store_writer()
+        self.multi_document_store = get_multi_document_store()
 
     def index_docx_file(
         self,
         file_path: str,
+        index: str,
         language: Literal["de", "en"] | None = None,
-        index: str | None = None,
         file_id: int | None = None,
     ) -> list[Document]:
         results = self.pipeline.run(
@@ -64,9 +64,13 @@ class IndexingManager:
                 **({"language": language} if language else {}),
                 **({"file_id": file_id} if file_id is not None else {}),
             },
-            params={"DocumentStoreWriter": {"index": index}},
+            params={"DocumentStore": {"index": index}},
         )
         return results.get("documents", []) if results else []
 
-    def unindex(self, index: str, file_id: int) -> None:
-        self.faiss_document_store_writer.delete_documents(index=index, file_id=file_id)
+    def unindex_file(self, index: str, file_id: int) -> None:
+        with self.multi_document_store.sub_document_store(index) as document_store:
+            document_store.delete_documents(file_id)
+
+    def delete_index(self, index: str) -> None:
+        self.multi_document_store.delete_sub_document_store(index)
