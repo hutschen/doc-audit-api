@@ -23,18 +23,6 @@ def to_abs_path(file_path: str) -> str:
     return os.path.normpath(abs_path)
 
 
-def cache_first_result(func):
-    cache = []  # Use a list instead of a variable because of Python scoping rules
-
-    def wrapper(*args, **kwargs):
-        if not cache:
-            result = func(*args, **kwargs)
-            cache.append(result)
-        return cache[0]
-
-    return wrapper
-
-
 def remove_extra_whitespace(text):
     text = re.sub(r"\s+", " ", text)
     return text.strip()
