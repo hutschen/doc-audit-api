@@ -53,8 +53,8 @@ def create_document(
     )
     indexing_manager.index_docx_file(
         temp_file.name,
+        str(group_id),
         language,
-        index=str(group_id),
         file_id=cast(int, document.id),
     )
     return document
