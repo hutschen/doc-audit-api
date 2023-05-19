@@ -80,8 +80,10 @@ def update_document(
 
 @router.delete("/documents/{document_id}", status_code=204)
 def delete_document(
-    document_id: int, document_manager: DocumentManager = Depends(DocumentManager)
+    document_id: int,
+    document_manager: DocumentManager = Depends(),
+    indexing_manager: IndexingManager = Depends(),
 ) -> None:
     document = document_manager.get_document(document_id)
-    faiss_document_store_writer.delete_documents(document.id)  # type: ignore
+    indexing_manager.unindex_file(str(document.group_id), cast(int, document.id))
     document_manager.delete_document(document)
