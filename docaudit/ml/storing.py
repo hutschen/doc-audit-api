@@ -17,7 +17,10 @@ import os
 import threading
 from contextlib import contextmanager
 from functools import lru_cache
+from typing import cast
 
+from tqdm.auto import tqdm
+from haystack.document_stores.base import get_batches_from_generator
 from haystack.document_stores.faiss import FAISSDocumentStore
 from haystack.nodes import BaseComponent, EmbeddingRetriever
 from haystack.schema import Document
@@ -67,18 +70,49 @@ class SubDocumentStore:
                 similarity="cosine",
             )
 
+    def _compute_embeddings(
+        self,
+        documents: list[Document],
+        retriever: EmbeddingRetriever,
+        batch_size: int = 10_000,
+    ) -> None:
+        document_count = len(documents)
+        batched_documents = get_batches_from_generator(documents, batch_size)
+        with tqdm(
+            total=document_count,
+            disable=not self.document_store.progress_bar,
+            position=0,
+            unit=" docs",
+            desc="Generating embeddings",
+        ) as progress_bar:
+            for document_batch in batched_documents:
+                document_batch = cast(list[Document], document_batch)
+                embeddings = retriever.embed_documents(document_batch)
+
+                self.document_store._validate_embeddings_shape(
+                    embeddings=embeddings,
+                    num_documents=len(document_batch),
+                    embedding_dim=self.document_store.embedding_dim,
+                )
+
+                if self.document_store.similarity == "cosine":
+                    self.document_store.normalize_embedding(embeddings)
+
+                for document, embedding in zip(document_batch, embeddings):
+                    document.embedding = embedding
+
+                progress_bar.set_description("Documents processed")
+                progress_bar.update(batch_size)
+
     def write_documents(
         self, documents: list[Document], retriever: EmbeddingRetriever | None = None
     ) -> None:
+        # Compute embeddings
+        if retriever is not None:
+            self._compute_embeddings(documents, retriever)
         with self.document_store_lock:
             self.document_store.write_documents(documents, duplicate_documents="skip")
-
-            # Update and save embeddings
-            if retriever is not None:
-                self.document_store.update_embeddings(
-                    retriever, update_existing_embeddings=False
-                )
-                self.document_store.save(self._index_filename, self._config_filename)
+            self.document_store.save(self._index_filename, self._config_filename)
 
     def delete_documents(self, file_id: int | None = None):
         with self.document_store_lock:
