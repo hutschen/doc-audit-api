@@ -22,58 +22,65 @@ from haystack.document_stores.faiss import FAISSDocumentStore
 from haystack.nodes import BaseComponent, EmbeddingRetriever
 from haystack.schema import Document
 
+from ..errors import NotFoundError
 from ..utils import to_abs_path
 
 
 # TODO: Make this thread-safe using a read-write lock
-class GroupDocumentStore:
+class SubDocumentStore:
     FAISS_DIRNAME = to_abs_path("faiss")
 
-    def __init__(self, group_id: int):
+    def __init__(self, index: str):
         # fmt: off
-        self._db_filename = os.path.join(self.FAISS_DIRNAME, f"{group_id}_faiss_document_store.db")
-        self._index_filename = os.path.join(self.FAISS_DIRNAME, f"{group_id}_faiss_index.faiss")
+        self._db_filename = os.path.join(self.FAISS_DIRNAME, f"{index}_faiss_document_store.db")
+        self._index_filename = os.path.join(self.FAISS_DIRNAME, f"{index}_faiss_index.faiss")
+        self._config_filename = os.path.join(self.FAISS_DIRNAME, f"{index}_faiss_config.json")
         self.document_store = self._create_or_load_document_store()
+        
+        self._mark_for_deletion = False
         self._user_count = 0
         # fmt: on
 
-    def _delete_files(self):
-        for filename in [self._db_filename, self._index_filename]:
+    def delete_files(self):
+        for filename in [
+            self._db_filename,
+            self._index_filename,
+            self._config_filename,
+        ]:
             if os.path.isfile(filename):
                 os.remove(filename)
 
     def _create_or_load_document_store(self) -> FAISSDocumentStore:
-        config = dict(
-            sql_url=f"sqlite:///{self._db_filename}",
-            faiss_index_factory_str="Flat",
-            duplicate_documents="skip",
-            embedding_dim=1024,
-            similarity="cosine",
-        )
-
         if os.path.isfile(self._index_filename) and os.path.isfile(self._db_filename):
             # Load existing document store
-            return FAISSDocumentStore(faiss_index_path=self._index_filename, **config)
+            return FAISSDocumentStore.load(self._index_filename, self._config_filename)
         else:
             # Create new document store
-            self._delete_files()
-            return FAISSDocumentStore(**config)
+            self.delete_files()
+            return FAISSDocumentStore(
+                sql_url=f"sqlite:///{self._db_filename}",
+                faiss_index_factory_str="Flat",
+                duplicate_documents="skip",
+                embedding_dim=1024,
+                similarity="cosine",
+            )
 
     def write_documents(
-        self, documents: list[Document], retriever: EmbeddingRetriever
+        self, documents: list[Document], retriever: EmbeddingRetriever | None = None
     ) -> None:
         self.document_store.write_documents(documents, duplicate_documents="skip")
-        # Update and save embeddings
-        self.document_store.update_embeddings(
-            retriever, update_existing_embeddings=False
-        )
-        self.document_store.save(self._index_filename)
+        if retriever is not None:
+            # Update and save embeddings
+            self.document_store.update_embeddings(
+                retriever, update_existing_embeddings=False
+            )
+            self.document_store.save(self._index_filename, self._config_filename)
 
     def delete_documents(self, file_id: int | None = None):
         self.document_store.delete_documents(
             filters={"file_id": [file_id]} if file_id is not None else None,
         )
-        self.document_store.save(self._index_filename)
+        self.document_store.save(self._index_filename, self._config_filename)
 
     def query_by_embedding(self, *args, **kwargs):
         """Method is used in EmbeddingRetriever.retrieve"""
@@ -81,46 +88,57 @@ class GroupDocumentStore:
         return self.document_store.query_by_embedding(*args, **kwargs)
 
 
-class MultiGroupDocumentStore(BaseComponent):
+class MultiDocumentStore(BaseComponent):
     outgoing_edges = 1
 
     def __init__(self):
         self.document_stores_lock = threading.Lock()
-        self.document_stores: dict[int, GroupDocumentStore] = {}
+        self.document_stores: dict[str, SubDocumentStore] = {}
         self.index = "document"  # Attribute is used in EmbeddingRetriever.retrieve
+        self.retriever: EmbeddingRetriever | None = None
 
-    def _acquire_document_store(self, group_id: int):
+    def _acquire_document_store(self, index: str):
         with self.document_stores_lock:
-            if group_id not in self.document_stores:
-                self.document_stores[group_id] = GroupDocumentStore(group_id)
-            self.document_stores[group_id]._user_count += 1
-            return self.document_stores[group_id]
+            if index not in self.document_stores:
+                self.document_stores[index] = SubDocumentStore(index)
+            if self.document_stores[index]._mark_for_deletion:
+                raise NotFoundError(
+                    f"Document store with index '{index}' is marked for deletion"
+                )
+            self.document_stores[index]._user_count += 1
+            return self.document_stores[index]
 
-    def _release_document_store(self, index):
+    def _release_document_store(self, index: str):
         with self.document_stores_lock:
             self.document_stores[index]._user_count -= 1
             if self.document_stores[index]._user_count == 0:
+                if self.document_stores[index]._mark_for_deletion:
+                    self.document_stores[index].delete_files()
                 del self.document_stores[index]
 
     @contextmanager
-    def _document_store(self, index):
+    def sub_document_store(self, index):
         document_store = self._acquire_document_store(index)
         try:
             yield document_store
         finally:
             self._release_document_store(index)
 
+    def delete_sub_document_store(self, index: str):
+        with self.document_stores_lock:
+            if index in self.document_stores:
+                self.document_stores[index]._mark_for_deletion = True
+
     def run(
         self,
         *,
         documents: list[Document],
         index: str,
-        retriever: EmbeddingRetriever,
         **kwargs,
     ):
         # Method will be called by indexing pipeline
-        with self._document_store(index) as document_store:
-            document_store.write_documents(documents, retriever)
+        with self.sub_document_store(index) as document_store:
+            document_store.write_documents(documents, self.retriever)
             return {"documents": documents, **kwargs}, "output_1"
 
     def run_batch(self, **_):
@@ -128,11 +146,11 @@ class MultiGroupDocumentStore(BaseComponent):
             "run_batch is not implemented for MultiGroupDocumentStore"
         )
 
-    def query_by_embedding(self, *args, **kwargs):
-        with self._document_store(self.index) as document_store:
+    def query_by_embedding(self, *args, index: str, **kwargs):
+        with self.sub_document_store(index) as document_store:
             return document_store.query_by_embedding(*args, **kwargs)
 
 
 @lru_cache()
-def get_multi_group_document_store():
-    return MultiGroupDocumentStore()
+def get_multi_document_store():
+    return MultiDocumentStore()
