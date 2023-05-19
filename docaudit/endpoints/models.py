@@ -38,6 +38,7 @@ class DocumentOutput(DocumentInput):
         orm_mode = True
 
     id: int
+    group: GroupOutput
 
 
 class ResultMetaOutput(BaseModel):
