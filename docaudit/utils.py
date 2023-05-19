@@ -14,8 +14,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 
 def to_abs_path(file_path: str) -> str:
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(current_dir, "..", file_path)
+    abs_path = os.path.join(current_dir, "..", file_path)
+    return os.path.normpath(abs_path)
+
+
+def remove_extra_whitespace(text):
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()

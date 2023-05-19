@@ -17,11 +17,11 @@ from typing import Literal
 from pydantic import BaseModel
 
 
-class ProjectInput(BaseModel):
+class GroupInput(BaseModel):
     name: str
 
 
-class ProjectOutput(ProjectInput):
+class GroupOutput(GroupInput):
     class Config:
         orm_mode = True
 
@@ -38,4 +38,12 @@ class DocumentOutput(DocumentInput):
         orm_mode = True
 
     id: int
-    project: ProjectOutput
+    group: GroupOutput
+
+
+class ResultOutput(BaseModel):
+    id: str
+    score: float
+    content: str
+    headers: list[str]
+    document: DocumentOutput

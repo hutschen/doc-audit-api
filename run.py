@@ -14,8 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from docaudit.indexing import index_docx
-from docaudit.querying import query
+from docaudit.ml.indexing import index_docx
+from docaudit.ml.querying import query
 
 index_docx(["tests/data/test.docx"], language="de")
 

@@ -13,11 +13,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Any
+from typing import Any, Literal, cast
 from fastapi import APIRouter, Depends
+from docaudit.db.groups import GroupManager
+
+from ..endpoints.temp_file import copy_upload_to_temp_file
+from ..ml.indexing import IndexingManager
 
 from ..db.documents import DocumentManager, get_document_filters
-from ..db.projects import ProjectManager
 from ..db.schemas import Document
 from .models import DocumentInput, DocumentOutput
 
@@ -33,16 +36,28 @@ def get_documents(
 
 
 @router.post(
-    "/projects/{project_id}/documents", status_code=201, response_model=DocumentOutput
+    "groups/{group_id}/documents", status_code=201, response_model=DocumentOutput
 )
 def create_document(
-    project_id: int,
-    document: DocumentInput,
-    project_manager: ProjectManager = Depends(ProjectManager),
-    document_manager: DocumentManager = Depends(DocumentManager),
+    group_id: int,
+    title: str,
+    language: Literal["de", "en"] = "de",
+    temp_file: Any = Depends(copy_upload_to_temp_file),
+    group_manager: GroupManager = Depends(),
+    document_manager: DocumentManager = Depends(),
+    indexing_manager: IndexingManager = Depends(),
 ) -> Document:
-    project = project_manager.get_project(project_id)
-    return document_manager.create_document(project, document)
+    document = document_manager.create_document(
+        group_manager.get_group(group_id),
+        DocumentInput(title=title, language=language),
+    )
+    indexing_manager.index_docx_file(
+        temp_file.name,
+        str(group_id),
+        language,
+        file_id=cast(int, document.id),
+    )
+    return document
 
 
 @router.get("/documents/{document_id}", response_model=DocumentOutput)
@@ -65,7 +80,10 @@ def update_document(
 
 @router.delete("/documents/{document_id}", status_code=204)
 def delete_document(
-    document_id: int, document_manager: DocumentManager = Depends(DocumentManager)
+    document_id: int,
+    document_manager: DocumentManager = Depends(),
+    indexing_manager: IndexingManager = Depends(),
 ) -> None:
     document = document_manager.get_document(document_id)
+    indexing_manager.unindex_file(str(document.group_id), cast(int, document.id))
     document_manager.delete_document(document)

@@ -9,6 +9,7 @@ python-docx = "*"
 sqlalchemy = "*"
 farm-haystack = {extras = ["faiss"], version = "*"}
 pyyaml = "*"
+python-multipart = "*"
 
 [dev-packages]
 pytest = "*"

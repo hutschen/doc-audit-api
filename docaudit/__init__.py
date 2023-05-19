@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .angular import AngularFiles
 from .config import load_config
 from .db import connection
-from .endpoints import documents, projects
+from .endpoints import documents, groups, querying
 from .utils import to_abs_path
 
 config = load_config()
@@ -31,8 +30,9 @@ app = FastAPI(
     redoc_url=config.fastapi.redoc_url,
 )
 
-app.include_router(projects.router, prefix="/api")
+app.include_router(groups.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
+app.include_router(querying.router, prefix="/api")
 app.mount("/", AngularFiles(directory=to_abs_path("htdocs"), html=True))
 app.add_middleware(
     CORSMiddleware,

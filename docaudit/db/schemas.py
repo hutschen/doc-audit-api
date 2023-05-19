@@ -13,28 +13,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from sqlalchemy import Column, Integer, String, Table, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from .connection import Base
 
-# Association table for the many-to-many relationship between Document and HaystackDocument
-document_haystackdocument_table = Table(
-    "document_haystackdocument",
-    Base.metadata,
-    Column("document_id", Integer, ForeignKey("document.id")),
-    Column("haystack_document_id", String, ForeignKey("haystack_document.hash_id")),
-)
 
-
-class Project(Base):
-    __tablename__ = "project"
+class Group(Base):
+    __tablename__ = "group"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
 
-    # Relationship to Document with cascade delete
-    documents = relationship(
-        "Document", back_populates="project", cascade="all, delete, delete-orphan"
-    )
+    # Relationship to Document
+    documents = relationship("Document", back_populates="group", cascade="all,delete")
 
 
 class Document(Base):
@@ -43,27 +33,6 @@ class Document(Base):
     title = Column(String, nullable=False)
     language = Column(String, default="de", nullable=False)
 
-    # ForeignKey column pointing to Project
-    project_id = Column(Integer, ForeignKey("project.id"))
-
-    # Relationship to Project
-    project = relationship("Project", back_populates="documents", lazy="joined")
-
-    # Relationship to HaystackDocument
-    haystack_documents = relationship(
-        "HaystackDocument",
-        secondary=document_haystackdocument_table,
-        back_populates="documents",
-    )
-
-
-class HaystackDocument(Base):
-    __tablename__ = "haystack_document"
-    hash_id = Column(String, primary_key=True)
-
-    # Relationship to Document
-    documents = relationship(
-        "Document",
-        secondary=document_haystackdocument_table,
-        back_populates="haystack_documents",
-    )
+    # Relationship to Group
+    group_id = Column(Integer, ForeignKey("group.id"))
+    group = relationship("Group", back_populates="documents")

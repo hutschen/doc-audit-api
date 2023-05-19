@@ -17,6 +17,13 @@ from typing import Any
 from fastapi import HTTPException
 
 
+class ClientError(HTTPException):
+    def __init__(
+        self, detail: Any = None, headers: dict[str, Any] | None = None
+    ) -> None:
+        HTTPException.__init__(self, status_code=400, detail=detail, headers=headers)
+
+
 class NotFoundError(HTTPException):
     def __init__(
         self, detail: Any = None, headers: dict[str, Any] | None = None
