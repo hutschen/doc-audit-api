@@ -18,7 +18,8 @@ import os
 
 def to_abs_path(file_path: str) -> str:
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(current_dir, "..", file_path)
+    abs_path = os.path.join(current_dir, "..", file_path)
+    return os.path.normpath(abs_path)
 
 
 def cache_first_result(func):
