@@ -125,9 +125,9 @@ class MultiDocumentStore(BaseComponent):
             self._release_document_store(index)
 
     def delete_sub_document_store(self, index: str):
-        with self.document_stores_lock:
-            if index in self.document_stores:
-                self.document_stores[index]._mark_for_deletion = True
+        with self.sub_document_store(index) as document_store:
+            with self.document_stores_lock:
+                document_store._mark_for_deletion = True
 
     def run(
         self,

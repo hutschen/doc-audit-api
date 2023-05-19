@@ -14,11 +14,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from typing import Any
+
 from fastapi import APIRouter, Depends
 
 from ..db.groups import GroupManager, get_group_filters
 from ..db.schemas import Group
-from .models import GroupOutput, GroupInput
+from ..ml.indexing import IndexingManager
+from .models import GroupInput, GroupOutput
 
 router = APIRouter(tags=["groups"])
 
@@ -55,5 +57,11 @@ def update_group(
 
 
 @router.delete("/groups/{group_id}", status_code=204)
-def delete_group(group_id: int, group_manager: GroupManager = Depends()) -> None:
-    group_manager.delete_group(group_manager.get_group(group_id))
+def delete_group(
+    group_id: int,
+    group_manager: GroupManager = Depends(),
+    indexing_manager: IndexingManager = Depends(),
+) -> None:
+    group = group_manager.get_group(group_id)
+    group_manager.delete_group(group)
+    indexing_manager.delete_index(str(group_id))
