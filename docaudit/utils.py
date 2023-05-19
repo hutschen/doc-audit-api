@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 
 def to_abs_path(file_path: str) -> str:
@@ -32,3 +33,8 @@ def cache_first_result(func):
         return cache[0]
 
     return wrapper
+
+
+def remove_extra_whitespace(text):
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()

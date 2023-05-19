@@ -21,6 +21,8 @@ from docx.text.paragraph import Paragraph
 from haystack.nodes import BaseComponent
 from haystack.schema import Document
 
+from ..utils import remove_extra_whitespace
+
 
 class DocxParser(BaseComponent):
     outgoing_edges = 1
@@ -40,7 +42,7 @@ class DocxParser(BaseComponent):
             return False
 
         if len(headers) < level:
-            headers.append(paragraph.text)
+            headers.append(remove_extra_whitespace(paragraph.text))
             return True
 
         while len(headers) > level:
@@ -48,7 +50,7 @@ class DocxParser(BaseComponent):
 
         # len(headers) == level
         headers.pop()
-        headers.append(paragraph.text)
+        headers.append(remove_extra_whitespace(paragraph.text))
         return True
 
     @staticmethod
