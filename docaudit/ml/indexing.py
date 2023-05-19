@@ -19,7 +19,7 @@ from typing import Literal
 from haystack import Pipeline
 from haystack.schema import Document
 
-from .parsing import DocxParser
+from .parsing import DocxParser, validate_docx_file
 from .preprocessing import LanguageDispatcher, create_preprocessor
 from .retrieving import get_embedding_retriever
 from .storing import get_multi_document_store
@@ -58,6 +58,7 @@ class IndexingManager:
         language: Literal["de", "en"] | None = None,
         file_id: int | None = None,
     ) -> list[Document]:
+        validate_docx_file(file_path)
         results = self.pipeline.run(
             file_paths=[file_path],
             meta={

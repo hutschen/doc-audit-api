@@ -21,6 +21,8 @@ from docx.text.paragraph import Paragraph
 from haystack.nodes import BaseComponent
 from haystack.schema import Document
 
+from docaudit.errors import ClientError
+
 from ..utils import remove_extra_whitespace
 
 
@@ -95,3 +97,11 @@ class DocxParser(BaseComponent):
 
     def run_batch(self, **_):
         raise NotImplementedError("run_batch is not implemented for DocxParser")
+
+
+def validate_docx_file(file_path: str) -> None:
+    # FIXME: This is a workaround because haystack pipelines raise generic exceptions
+    try:
+        docx.Document(file_path)
+    except docx.opc.exceptions.PackageNotFoundError as e:  # type: ignore
+        raise ClientError(f"Not a valid docx file") from e
