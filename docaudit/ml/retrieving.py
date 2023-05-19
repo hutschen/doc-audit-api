@@ -14,16 +14,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from haystack.document_stores.base import BaseDocumentStore, get_batches_from_generator
+from functools import lru_cache
+from haystack.document_stores.base import get_batches_from_generator
 from haystack.nodes import EmbeddingRetriever, BaseComponent
 from haystack.schema import Document
 from tqdm.auto import tqdm
 
 
-def create_embedding_retriever(document_store: BaseDocumentStore | None = None):
+@lru_cache()
+def get_embedding_retriever():
     # Create embedding retriever that can process German texts
     return EmbeddingRetriever(
-        document_store=document_store,
         embedding_model="deutsche-telekom/gbert-large-paraphrase-cosine",
         use_gpu=False,
     )
