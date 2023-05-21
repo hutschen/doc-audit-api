@@ -36,7 +36,7 @@ def get_documents(
 
 
 @router.post(
-    "groups/{group_id}/documents", status_code=201, response_model=DocumentOutput
+    "/groups/{group_id}/documents", status_code=201, response_model=DocumentOutput
 )
 def create_document(
     group_id: int,
