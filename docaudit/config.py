@@ -26,6 +26,11 @@ class DatabaseConfig(BaseModel):
     echo: bool = False
 
 
+class TransformersConfig(BaseModel):
+    embedding_model: str = "../gbert-large-paraphrase-cosine"
+    use_gpu: bool = False
+
+
 class FastApiConfig(BaseModel):
     docs_url: str | None = None  # "/docs"
     redoc_url: str | None = None  # "/redoc"
@@ -74,6 +79,7 @@ class UvicornConfig(BaseModel):
 
 class Config(BaseModel):
     database: DatabaseConfig = DatabaseConfig()
+    transformers: TransformersConfig = TransformersConfig()
     fastapi: FastApiConfig = FastApiConfig()
     uvicorn: UvicornConfig = UvicornConfig()
 

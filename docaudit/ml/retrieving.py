@@ -15,18 +15,24 @@
 
 
 from functools import lru_cache
+
 from haystack.document_stores.base import get_batches_from_generator
-from haystack.nodes import EmbeddingRetriever, BaseComponent
+from haystack.nodes import BaseComponent, EmbeddingRetriever
 from haystack.schema import Document
 from tqdm.auto import tqdm
+
+from ..utils import to_abs_path
+from ..config import load_config
 
 
 @lru_cache()
 def get_embedding_retriever():
+    config = load_config().transformers
+
     # Create embedding retriever that can process German texts
     return EmbeddingRetriever(
-        embedding_model="deutsche-telekom/gbert-large-paraphrase-cosine",
-        use_gpu=False,
+        embedding_model=to_abs_path(config.embedding_model),
+        use_gpu=config.use_gpu,
     )
 
 
