@@ -1,0 +1,18 @@
+# Project specific
+config.yml
+*.db
+*.pyc
+__pycache__
+.pytest_cache
+faiss/*
+!faiss/.gitkeep
+tests/data/*
+!tests/data/.gitkeep
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
