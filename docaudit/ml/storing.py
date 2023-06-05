@@ -19,11 +19,15 @@ from contextlib import contextmanager
 from functools import lru_cache
 from typing import cast
 
-from tqdm.auto import tqdm
+import numpy as np
 from haystack.document_stores.base import get_batches_from_generator
 from haystack.document_stores.faiss import FAISSDocumentStore
+from haystack.document_stores.sql import DocumentORM, MetaDocumentORM
 from haystack.nodes import BaseComponent, EmbeddingRetriever
 from haystack.schema import Document
+from tqdm.auto import tqdm
+
+import faiss
 
 from ..errors import NotFoundError
 from ..utils import to_abs_path
@@ -65,7 +69,7 @@ class SubDocumentStore:
             self.delete_files()
             return FAISSDocumentStore(
                 sql_url=f"sqlite:///{self._db_filename}",
-                faiss_index_factory_str="Flat",
+                faiss_index_factory_str="IDMap,Flat",
                 duplicate_documents="skip",
                 embedding_dim=1024,
                 similarity="cosine",
@@ -120,17 +124,32 @@ class SubDocumentStore:
 
     def delete_documents(self, file_id: int | None = None):
         with self.document_store_lock:
-            document_ids = [
-                d.id
-                for d in self.document_store.get_all_documents_generator(
+            affected_docs = tuple(
+                self.document_store.get_all_documents_generator(
                     index=self._index_name,
                     filters={"file_id": [file_id]} if file_id is not None else None,
                 )
-            ]
-            self.document_store.delete_documents(
-                index=self._index_name, ids=document_ids
             )
-            self.document_store.save(self._index_filename, self._config_filename)
+
+            # Delete vectors from FAISS index and save it
+            vector_ids = [
+                int(doc.meta.get("vector_id"))
+                for doc in affected_docs
+                if doc.meta and doc.meta.get("vector_id") is not None
+            ]
+            faiss_index: faiss.IndexIDMap = self.document_store.faiss_indexes[self._index_name]  # fmt: skip
+            faiss_index.remove_ids(np.array(vector_ids, dtype="int64"))
+            faiss.write_index(faiss_index, self._index_filename)
+
+            # Delete documents from SQL database
+            doc_ids = [doc.id for doc in affected_docs]
+            self.document_store.session.query(DocumentORM).filter(
+                DocumentORM.id.in_(doc_ids)
+            ).delete(synchronize_session=False)
+            self.document_store.session.query(MetaDocumentORM).filter(
+                MetaDocumentORM.document_id.in_(doc_ids)
+            ).delete(synchronize_session=False)
+            self.document_store.session.commit()
 
     def query_by_embedding(self, *args, **kwargs):
         """Method is used in EmbeddingRetriever.retrieve"""
