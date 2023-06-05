@@ -35,6 +35,7 @@ class SubDocumentStore:
 
     def __init__(self, index: str):
         # fmt: off
+        self._index_name = index
         self._db_filename = os.path.join(self.FAISS_DIRNAME, f"{index}_faiss_document_store.db")
         self._index_filename = os.path.join(self.FAISS_DIRNAME, f"{index}_faiss_index.faiss")
         self._config_filename = os.path.join(self.FAISS_DIRNAME, f"{index}_faiss_config.json")
@@ -68,6 +69,7 @@ class SubDocumentStore:
                 duplicate_documents="skip",
                 embedding_dim=1024,
                 similarity="cosine",
+                index=self._index_name,
             )
 
     def _compute_embeddings(
@@ -111,13 +113,22 @@ class SubDocumentStore:
         if retriever is not None:
             self._compute_embeddings(documents, retriever)
         with self.document_store_lock:
-            self.document_store.write_documents(documents, duplicate_documents="skip")
+            self.document_store.write_documents(
+                documents, index=self._index_name, duplicate_documents="skip"
+            )
             self.document_store.save(self._index_filename, self._config_filename)
 
     def delete_documents(self, file_id: int | None = None):
         with self.document_store_lock:
+            document_ids = [
+                d.id
+                for d in self.document_store.get_all_documents_generator(
+                    index=self._index_name,
+                    filters={"file_id": [file_id]} if file_id is not None else None,
+                )
+            ]
             self.document_store.delete_documents(
-                filters={"file_id": [file_id]} if file_id is not None else None,
+                index=self._index_name, ids=document_ids
             )
             self.document_store.save(self._index_filename, self._config_filename)
 
@@ -125,7 +136,9 @@ class SubDocumentStore:
         """Method is used in EmbeddingRetriever.retrieve"""
         # TODO: Check if this is thread-safe (probably not) / use read lock
         with self.document_store_lock:
-            return self.document_store.query_by_embedding(*args, **kwargs)
+            return self.document_store.query_by_embedding(
+                *args, index=self._index_name, **kwargs
+            )
 
 
 class MultiDocumentStore(BaseComponent):
