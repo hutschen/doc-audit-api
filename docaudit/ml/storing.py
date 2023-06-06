@@ -149,12 +149,24 @@ class SubDocumentStore:
                 np.array(vector_ids, dtype=np.int64),
             )
 
+    @staticmethod
+    def _drop_duplicate_documents(documents: Iterable[Document]):
+        seen_document_ids = set()
+        for document in documents:
+            if document.id not in seen_document_ids:
+                seen_document_ids.add(document.id)
+                yield document
+
     def write_documents(
         self, documents: list[Document], retriever: EmbeddingRetriever | None = None
     ) -> None:
+        # Drop duplicate documents
+        documents = list(self._drop_duplicate_documents(documents))
+
         # Compute embeddings
         if retriever is not None:
             self._compute_embeddings(documents, retriever)
+
         with self.document_store_lock:
             # Write vectors to FAISS index
             faiss_index = self.document_store.faiss_indexes[self._index_name]
