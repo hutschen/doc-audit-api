@@ -22,7 +22,7 @@ from typing import cast
 import numpy as np
 from haystack.document_stores.base import get_batches_from_generator
 from haystack.document_stores.faiss import FAISSDocumentStore
-from haystack.document_stores.sql import DocumentORM, MetaDocumentORM
+from haystack.document_stores.sql import DocumentORM, MetaDocumentORM, SQLDocumentStore
 from haystack.nodes import BaseComponent, EmbeddingRetriever
 from haystack.schema import Document
 from tqdm.auto import tqdm
@@ -110,6 +110,27 @@ class SubDocumentStore:
                 progress_bar.set_description("Documents processed")
                 progress_bar.update(batch_size)
 
+    def _store_embeddings(
+        self, faiss_index: faiss.IndexIDMap, documents: list[Document]
+    ) -> None:
+        # Set vector_id meta field for each document with an embedding
+        vector_id = cast(int, faiss_index.index.ntotal)
+        embeddings = []
+        vector_ids = []
+        for document in documents:
+            if document.embedding is not None:
+                document.meta["vector_id"] = vector_id
+                embeddings.append(document.embedding)
+                vector_ids.append(vector_id)
+                vector_id += 1
+
+        # Add embeddings to FAISS index
+        if embeddings:
+            faiss_index.add_with_ids(
+                np.array(embeddings, dtype=np.float32),
+                np.array(vector_ids, dtype=np.int64),
+            )
+
     def write_documents(
         self, documents: list[Document], retriever: EmbeddingRetriever | None = None
     ) -> None:
@@ -117,10 +138,18 @@ class SubDocumentStore:
         if retriever is not None:
             self._compute_embeddings(documents, retriever)
         with self.document_store_lock:
-            self.document_store.write_documents(
-                documents, index=self._index_name, duplicate_documents="skip"
-            )
+            # Write vectors to FAISS index
+            faiss_index = self.document_store.faiss_indexes[self._index_name]
+            self._store_embeddings(faiss_index, documents)
             self.document_store.save(self._index_filename, self._config_filename)
+
+            # Write documents to SQL database
+            SQLDocumentStore.write_documents(
+                self.document_store,
+                documents,
+                index=self._index_name,
+                duplicate_documents="skip",
+            )
 
     def delete_documents(self, file_id: int | None = None):
         with self.document_store_lock:
