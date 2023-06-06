@@ -17,13 +17,17 @@ import os
 import threading
 from contextlib import contextmanager
 from functools import lru_cache
-from typing import cast
+from typing import Iterable, cast
 
-from tqdm.auto import tqdm
-from haystack.document_stores.base import get_batches_from_generator
+import numpy as np
+from haystack.document_stores.base import get_batches_from_generator, BaseDocumentStore
 from haystack.document_stores.faiss import FAISSDocumentStore
+from haystack.document_stores.sql import DocumentORM, MetaDocumentORM, SQLDocumentStore
 from haystack.nodes import BaseComponent, EmbeddingRetriever
 from haystack.schema import Document
+from tqdm.auto import tqdm
+
+import faiss
 
 from ..errors import NotFoundError
 from ..utils import to_abs_path
@@ -35,6 +39,7 @@ class SubDocumentStore:
 
     def __init__(self, index: str):
         # fmt: off
+        self._index_name = index
         self._db_filename = os.path.join(self.FAISS_DIRNAME, f"{index}_faiss_document_store.db")
         self._index_filename = os.path.join(self.FAISS_DIRNAME, f"{index}_faiss_index.faiss")
         self._config_filename = os.path.join(self.FAISS_DIRNAME, f"{index}_faiss_config.json")
@@ -64,10 +69,11 @@ class SubDocumentStore:
             self.delete_files()
             return FAISSDocumentStore(
                 sql_url=f"sqlite:///{self._db_filename}",
-                faiss_index_factory_str="Flat",
+                faiss_index_factory_str="IDMap,Flat",
                 duplicate_documents="skip",
                 embedding_dim=1024,
                 similarity="cosine",
+                index=self._index_name,
             )
 
     def _compute_embeddings(
@@ -104,28 +110,113 @@ class SubDocumentStore:
                 progress_bar.set_description("Documents processed")
                 progress_bar.update(batch_size)
 
+    @staticmethod
+    def _generate_vector_id(file_id: int, vector_counter: int, counter_bits=48):
+        # Store the file ID in the upper bits and the vector ID in the lower bits
+        return (file_id << counter_bits) | vector_counter
+
+    @classmethod
+    def _store_embeddings(
+        cls, faiss_index: faiss.IndexIDMap, documents: Iterable[Document]
+    ) -> None:
+        # Set vector_id meta field for each document with an embedding
+        embeddings = []
+        vector_ids = []
+        vector_counters = {}
+        stored_document_ids = set()
+
+        for document in documents:
+            if document.embedding is not None and document.id not in stored_document_ids:  # fmt: skip
+                file_id = document.meta["file_id"]
+                vector_counter = vector_counters.get(file_id, 0)
+
+                vector_id = cls._generate_vector_id(file_id, vector_counter)
+                vector_counters[file_id] = vector_counter + 1
+
+                stored_document_ids.add(document.id)
+                document.meta["vector_id"] = vector_id
+                embeddings.append(document.embedding)
+                vector_ids.append(vector_id)
+
+        embeddings_to_store = np.array(embeddings, dtype=np.float32)
+        # Similarity is computed using cosine distance, so we need to normalize the embeddings
+        BaseDocumentStore.normalize_embedding(embeddings_to_store)
+
+        # Add embeddings to FAISS index
+        if embeddings:
+            faiss_index.add_with_ids(
+                embeddings_to_store,
+                np.array(vector_ids, dtype=np.int64),
+            )
+
+    @staticmethod
+    def _drop_duplicate_documents(documents: Iterable[Document]):
+        seen_document_ids = set()
+        for document in documents:
+            if document.id not in seen_document_ids:
+                seen_document_ids.add(document.id)
+                yield document
+
     def write_documents(
         self, documents: list[Document], retriever: EmbeddingRetriever | None = None
     ) -> None:
+        # Drop duplicate documents
+        documents = list(self._drop_duplicate_documents(documents))
+
         # Compute embeddings
         if retriever is not None:
             self._compute_embeddings(documents, retriever)
+
         with self.document_store_lock:
-            self.document_store.write_documents(documents, duplicate_documents="skip")
+            # Write vectors to FAISS index
+            faiss_index = self.document_store.faiss_indexes[self._index_name]
+            self._store_embeddings(faiss_index, documents)
             self.document_store.save(self._index_filename, self._config_filename)
+
+            # Write documents to SQL database
+            SQLDocumentStore.write_documents(
+                self.document_store,
+                documents,
+                index=self._index_name,
+                duplicate_documents="skip",
+            )
 
     def delete_documents(self, file_id: int | None = None):
         with self.document_store_lock:
-            self.document_store.delete_documents(
-                filters={"file_id": [file_id]} if file_id is not None else None,
+            affected_docs = tuple(
+                self.document_store.get_all_documents_generator(
+                    index=self._index_name,
+                    filters={"file_id": [file_id]} if file_id is not None else None,
+                )
             )
-            self.document_store.save(self._index_filename, self._config_filename)
+
+            # Delete vectors from FAISS index and save it
+            vector_ids = [
+                int(doc.meta.get("vector_id"))
+                for doc in affected_docs
+                if doc.meta and doc.meta.get("vector_id") is not None
+            ]
+            faiss_index: faiss.IndexIDMap = self.document_store.faiss_indexes[self._index_name]  # fmt: skip
+            faiss_index.remove_ids(np.array(vector_ids, dtype="int64"))
+            faiss.write_index(faiss_index, self._index_filename)
+
+            # Delete documents from SQL database
+            doc_ids = [doc.id for doc in affected_docs]
+            self.document_store.session.query(DocumentORM).filter(
+                DocumentORM.id.in_(doc_ids)
+            ).delete(synchronize_session=False)
+            self.document_store.session.query(MetaDocumentORM).filter(
+                MetaDocumentORM.document_id.in_(doc_ids)
+            ).delete(synchronize_session=False)
+            self.document_store.session.commit()
 
     def query_by_embedding(self, *args, **kwargs):
         """Method is used in EmbeddingRetriever.retrieve"""
         # TODO: Check if this is thread-safe (probably not) / use read lock
         with self.document_store_lock:
-            return self.document_store.query_by_embedding(*args, **kwargs)
+            return self.document_store.query_by_embedding(
+                *args, index=self._index_name, **kwargs
+            )
 
 
 class MultiDocumentStore(BaseComponent):
