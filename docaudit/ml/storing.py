@@ -17,7 +17,7 @@ import os
 import threading
 from contextlib import contextmanager
 from functools import lru_cache
-from typing import cast
+from typing import Iterable, cast
 
 import numpy as np
 from haystack.document_stores.base import get_batches_from_generator
@@ -110,19 +110,31 @@ class SubDocumentStore:
                 progress_bar.set_description("Documents processed")
                 progress_bar.update(batch_size)
 
+    @staticmethod
+    def _generate_vector_id(file_id: int, vector_counter: int, counter_bits=48):
+        # Store the file ID in the upper bits and the vector ID in the lower bits
+        return (file_id << counter_bits) | vector_counter
+
+    @classmethod
     def _store_embeddings(
-        self, faiss_index: faiss.IndexIDMap, documents: list[Document]
+        cls, faiss_index: faiss.IndexIDMap, documents: Iterable[Document]
     ) -> None:
         # Set vector_id meta field for each document with an embedding
-        vector_id = cast(int, faiss_index.index.ntotal)
         embeddings = []
         vector_ids = []
+        vector_counters = {}
+
         for document in documents:
             if document.embedding is not None:
+                file_id = document.meta["file_id"]
+                vector_counter = vector_counters.get(file_id, 0)
+
+                vector_id = cls._generate_vector_id(file_id, vector_counter)
+                vector_counters[file_id] = vector_counter + 1
+
                 document.meta["vector_id"] = vector_id
                 embeddings.append(document.embedding)
                 vector_ids.append(vector_id)
-                vector_id += 1
 
         # Add embeddings to FAISS index
         if embeddings:
