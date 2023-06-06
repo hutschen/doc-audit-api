@@ -20,7 +20,7 @@ from functools import lru_cache
 from typing import Iterable, cast
 
 import numpy as np
-from haystack.document_stores.base import get_batches_from_generator
+from haystack.document_stores.base import get_batches_from_generator, BaseDocumentStore
 from haystack.document_stores.faiss import FAISSDocumentStore
 from haystack.document_stores.sql import DocumentORM, MetaDocumentORM, SQLDocumentStore
 from haystack.nodes import BaseComponent, EmbeddingRetriever
@@ -138,10 +138,14 @@ class SubDocumentStore:
                 embeddings.append(document.embedding)
                 vector_ids.append(vector_id)
 
+        embeddings_to_store = np.array(embeddings, dtype=np.float32)
+        # Similarity is computed using cosine distance, so we need to normalize the embeddings
+        BaseDocumentStore.normalize_embedding(embeddings_to_store)
+
         # Add embeddings to FAISS index
         if embeddings:
             faiss_index.add_with_ids(
-                np.array(embeddings, dtype=np.float32),
+                embeddings_to_store,
                 np.array(vector_ids, dtype=np.int64),
             )
 
