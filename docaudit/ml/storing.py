@@ -123,15 +123,17 @@ class SubDocumentStore:
         embeddings = []
         vector_ids = []
         vector_counters = {}
+        stored_document_ids = set()
 
         for document in documents:
-            if document.embedding is not None:
+            if document.embedding is not None and document.id not in stored_document_ids:  # fmt: skip
                 file_id = document.meta["file_id"]
                 vector_counter = vector_counters.get(file_id, 0)
 
                 vector_id = cls._generate_vector_id(file_id, vector_counter)
                 vector_counters[file_id] = vector_counter + 1
 
+                stored_document_ids.add(document.id)
                 document.meta["vector_id"] = vector_id
                 embeddings.append(document.embedding)
                 vector_ids.append(vector_id)
