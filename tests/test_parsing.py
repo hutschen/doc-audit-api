@@ -13,10 +13,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from docaudit.ml.parsing import parse_docx
+from docaudit.ml.parsing import DocxParser
 
 
 def test_parse_docx():
-    sections = list(parse_docx("tests/data/test.docx"))
-    for section in sections:
+    sections = list(DocxParser._parse_docx("tests/data/test.docx"))
+    for _ in sections:
         break
