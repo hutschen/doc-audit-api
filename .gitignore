@@ -16,3 +16,6 @@ tests/data/*
 !.vscode/launch.json
 !.vscode/extensions.json
 .history/*
+
+# macOS
+.DS_Store
