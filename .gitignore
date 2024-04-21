@@ -1,5 +1,6 @@
 # Project specific
 config.yml
+!.devcontainer/config.yml
 *.db
 *.pyc
 __pycache__
@@ -16,3 +17,6 @@ tests/data/*
 !.vscode/launch.json
 !.vscode/extensions.json
 .history/*
+
+# macOS
+.DS_Store

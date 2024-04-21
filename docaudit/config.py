@@ -27,7 +27,7 @@ class DatabaseConfig(BaseModel):
 
 
 class TransformersConfig(BaseModel):
-    embedding_model: str = "../gbert-large-paraphrase-cosine"
+    embedding_model: str = "gbert-large-paraphrase-cosine"
     use_gpu: bool = False
 
 
