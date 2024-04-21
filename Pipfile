@@ -4,17 +4,18 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pydantic = "*"
-python-docx = "*"
-sqlalchemy = "*"
-farm-haystack = {extras = ["faiss"], version = "*"}
-pyyaml = "*"
-python-multipart = "*"
 fastapi = "*"
 uvicorn = {extras = ["standard"], version = "*"}
+pydantic = "*"
+python-docx = "*"
+haystack-ai = "*"
+sentence-transformers = "*"
+qdrant-haystack = "*"
+python-multipart = "*"
+pyyaml = "*"
 
 [dev-packages]
 pytest = "*"
 
 [requires]
-python_version = "3.10"
+python_version = "3.12"
