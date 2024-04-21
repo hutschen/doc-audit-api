@@ -1,5 +1,6 @@
 # Project specific
 config.yml
+!.devcontainer/config.yml
 *.db
 *.pyc
 __pycache__

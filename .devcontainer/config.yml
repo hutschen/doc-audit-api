@@ -1,0 +1,9 @@
+database:
+  url: sqlite:///docaudit.db
+fastapi:
+  docs_url: /docs
+  redoc_url: /redoc
+uvicorn:
+  port: 8000
+  reload: true
+  log_level: info

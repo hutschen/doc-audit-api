@@ -27,5 +27,6 @@
   },
   "forwardPorts": [],
   "workspaceFolder": "/workspace",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  "postCreateCommand": "if [ ! -f config.yml ]; then cp .devcontainer/config.yml config.yml; fi"
 }
