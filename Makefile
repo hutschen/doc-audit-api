@@ -32,4 +32,4 @@ dependencies-update:
 	pipenv update --dev
 
 reset-faiss:
-	rm faiss/faiss_*
+	rm faiss/1_faiss_*
