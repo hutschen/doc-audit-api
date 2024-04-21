@@ -13,5 +13,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+serve:
+	python ./run.py
+
+test:
+	pytest
+
+dependencies-lock:
+	pipenv lock --keep-outdated
+
+dependencies-prod-install:
+	pipenv install --ignore-pipfile
+
+dependencies-dev-install:
+	pipenv install --ignore-pipfile --dev
+
+dependencies-update:
+	pipenv update --dev
+
 reset-faiss:
 	rm faiss/faiss_*
