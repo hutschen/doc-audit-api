@@ -1,0 +1,3 @@
+[submodule "gbert-large-paraphrase-cosine"]
+	path = gbert-large-paraphrase-cosine
+	url = https://huggingface.co/deutsche-telekom/gbert-large-paraphrase-cosine
