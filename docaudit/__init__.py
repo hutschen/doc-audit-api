@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,39 +22,42 @@ from fastapi.middleware.cors import CORSMiddleware
 from .angular import AngularFiles
 from .config import load_config
 from .db import connection
-from .endpoints import documents, groups, querying
+from .endpoints import groups
 from .utils import to_abs_path
 
 config = load_config()
-app = FastAPI(
-    title="DocAudit API",
-    docs_url=config.fastapi.docs_url,
-    redoc_url=config.fastapi.redoc_url,
-)
 
-app.include_router(groups.router, prefix="/api")
-app.include_router(documents.router, prefix="/api")
-app.include_router(querying.router, prefix="/api")
-app.mount("/", AngularFiles(directory=to_abs_path("htdocs"), html=True))
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://localhost:4200"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def get_app(lifespan=None) -> FastAPI:
+    app = FastAPI(
+        title="DocAudit API",
+        docs_url=config.fastapi.docs_url,
+        redoc_url=config.fastapi.redoc_url,
+    )
 
+    app.include_router(groups.router, prefix="/api")
+    # app.include_router(documents.router, prefix="/api")
+    # app.include_router(querying.router, prefix="/api")
+    app.mount("/", AngularFiles(directory=to_abs_path("htdocs"), html=True))
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:8000", "http://localhost:4200"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    return app
 
-@app.on_event("startup")
-def on_startup():
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Startup logic
     # migration.migrate(config.database)
     connection.setup_connection(config.database)
     connection.create_all()
-
-
-@app.on_event("shutdown")
-def on_shutdown():
+    yield
+    # Shutdown logic
     connection.dispose_connection()
+
+app = get_app(lifespan)
 
 
 def serve():

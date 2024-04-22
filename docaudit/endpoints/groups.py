@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends
 
 from ..db.groups import GroupManager, get_group_filters
 from ..db.schemas import Group
-from ..ml.indexing import IndexingManager
+# from ..ml.indexing import IndexingManager
 from .models import GroupInput, GroupOutput
 
 router = APIRouter(tags=["groups"])
@@ -60,8 +60,8 @@ def update_group(
 def delete_group(
     group_id: int,
     group_manager: GroupManager = Depends(),
-    indexing_manager: IndexingManager = Depends(),
+    # indexing_manager: IndexingManager = Depends(),
 ) -> None:
     group = group_manager.get_group(group_id)
     group_manager.delete_group(group)
-    indexing_manager.delete_index(str(group_id))
+    # indexing_manager.delete_index(str(group_id))

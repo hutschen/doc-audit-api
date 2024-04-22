@@ -23,7 +23,7 @@ class GroupInput(BaseModel):
 
 class GroupOutput(GroupInput):
     class Config:
-        orm_mode = True
+        from_attributes = True
 
     id: int
 
@@ -35,7 +35,7 @@ class DocumentInput(BaseModel):
 
 class DocumentOutput(DocumentInput):
     class Config:
-        orm_mode = True
+        from_attributes = True
 
     id: int
     group: GroupOutput
