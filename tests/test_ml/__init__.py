@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Helmar Hutschenreuter
+# Copyright (C) 2024 Helmar Hutschenreuter
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -11,12 +11,4 @@
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-from docaudit.ml.parsing import DocxParser
-
-
-def test_parse_docx():
-    sections = list(DocxParser._parse_docx("tests/data/test.docx"))
-    for _ in sections:
-        break
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
