@@ -15,10 +15,14 @@
 
 
 from haystack import Pipeline
-from haystack.components.embedders import SentenceTransformersDocumentEmbedder
+from haystack.components.embedders import (
+    SentenceTransformersDocumentEmbedder,
+    SentenceTransformersTextEmbedder,
+)
 from haystack.components.preprocessors import DocumentCleaner, DocumentSplitter
 from haystack.components.writers import DocumentWriter
 from haystack.document_stores.types import DuplicatePolicy
+from haystack_integrations.components.retrievers.qdrant import QdrantEmbeddingRetriever
 from haystack_integrations.document_stores.qdrant import QdrantDocumentStore
 
 from ..config import load_config
@@ -26,20 +30,39 @@ from ..utils import to_abs_path
 from .converters import DocxToDocuments
 
 
-def get_indexing_pipeline():
-    config = load_config().transformers
-
-    document_store = QdrantDocumentStore(
+def get_document_store():
+    return QdrantDocumentStore(
         host="qdrant",
         port=6333,
         grpc_port=6334,
         https=False,
-        recreate_index=True,
+        index="docaudit",  # Name of Qdrant collection
         return_embedding=True,
         wait_result_from_api=True,
         embedding_dim=1024,
         similarity="cosine",
     )
+
+
+def get_embedder(for_documents: bool = True):
+    config = load_config().transformers
+    embedder_class = (
+        SentenceTransformersDocumentEmbedder
+        if for_documents
+        else SentenceTransformersTextEmbedder
+    )
+    embedder = embedder_class(
+        model=to_abs_path(config.embedding_model),
+        progress_bar=True,
+        batch_size=32,
+        normalize_embeddings=True,
+    )
+    embedder.warm_up()
+    return embedder
+
+
+def get_indexing_pipeline():
+    document_store = get_document_store()
 
     docx_converter = DocxToDocuments()
     cleaner = DocumentCleaner(
@@ -52,13 +75,7 @@ def get_indexing_pipeline():
         split_length=100,
         split_overlap=0,
     )
-    embedder = SentenceTransformersDocumentEmbedder(
-        model=to_abs_path(config.embedding_model),
-        progress_bar=True,
-        batch_size=32,
-        normalize_embeddings=True,
-    )
-    embedder.warm_up()
+    embedder = get_embedder(for_documents=True)
     writer = DocumentWriter(
         document_store=document_store,
         policy=DuplicatePolicy.SKIP,
@@ -75,5 +92,17 @@ def get_indexing_pipeline():
     pipeline.connect("cleaner", "splitter")
     pipeline.connect("splitter", "embedder")
     pipeline.connect("embedder", "writer")
+
+    return pipeline
+
+
+def get_querying_pipeline():
+    embedder = get_embedder(for_documents=False)
+    retriever = QdrantEmbeddingRetriever(document_store=get_document_store())
+
+    pipeline = Pipeline()
+    pipeline.add_component("embedder", embedder)
+    pipeline.add_component("retriever", retriever)
+    pipeline.connect("embedder.embedding", "retriever.query_embedding")
 
     return pipeline

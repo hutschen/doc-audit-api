@@ -16,7 +16,7 @@
 from haystack import Pipeline
 
 from docaudit.ml.converters import DocxParser, DocxToDocuments
-from docaudit.ml.index import get_indexing_pipeline
+from docaudit.ml.index import get_indexing_pipeline, get_querying_pipeline
 
 
 # TODO: Build up a test Document with python-docx and test parsing it.
@@ -34,5 +34,16 @@ def test_parse_docx_pipeline():
 
 def test_index_pipeline():
     pipeline = get_indexing_pipeline()
-    splits = pipeline.run(dict(docx_converter=dict(sources=["tests/data/test.docx"])))
-    print(splits["writer"])
+    result = pipeline.run(dict(docx_converter=dict(sources=["tests/data/test.docx"])))
+    print(result["writer"])
+
+
+def test_query_pipeline():
+    pipeline = get_querying_pipeline()
+    result = pipeline.run(
+        dict(
+            embedder=dict(text="Active content has to be disabled."),
+            retriever=dict(top_k=3),
+        )
+    )
+    print(result["retriever"]["documents"][0])
