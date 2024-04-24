@@ -13,8 +13,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from docaudit.ml.converters import DocxParser, DocxToDocuments
 from haystack import Pipeline
+
+from docaudit.ml.converters import DocxParser, DocxToDocuments
+from docaudit.ml.index import get_indexing_pipeline
 
 
 # TODO: Build up a test Document with python-docx and test parsing it.
@@ -28,3 +30,9 @@ def test_parse_docx_pipeline():
     parsing_pipeline = Pipeline()
     parsing_pipeline.add_component("docx_converter", docx_converter)
     parsing_pipeline.run(dict(docx_converter=dict(sources=["tests/data/test.docx"])))
+
+
+def test_index_pipeline():
+    pipeline = get_indexing_pipeline()
+    splits = pipeline.run(dict(docx_converter=dict(sources=["tests/data/test.docx"])))
+    print(splits["writer"])
