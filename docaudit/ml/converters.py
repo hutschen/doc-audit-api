@@ -135,3 +135,59 @@ class SetContentBasedIds:
             doc.id = hashlib.sha256(doc.content.encode("utf-8")).hexdigest()
 
         return {"documents": documents}
+
+
+def recursively_merge_dicts(d1: Dict, d2: Dict) -> Dict:
+    """
+    Recursively merges two dictionaries.
+    """
+    merged = {}
+    all_keys = d1.keys() | d2.keys()
+
+    for key in all_keys:
+        if key in d1 and key in d2:
+            if isinstance(d1[key], dict) and isinstance(d2[key], dict):
+                merged[key] = recursively_merge_dicts(d1[key], d2[key])
+            elif isinstance(d1[key], list) and isinstance(d2[key], list):
+                merged[key] = d1[key] + d2[key]
+            else:
+                merged[key] = d1[key]
+        elif key in d1:
+            merged[key] = d1[key]
+        else:  # Key is only in d2
+            merged[key] = d2[key]
+
+    return merged
+
+
+@component
+class MergeMetadata:
+    """
+    Merges the metadata of documents with the same ID. WARNING: This results in removing
+    of duplicate documents.
+    """
+
+    @component.output_types(documents=List[Document])
+    def run(
+        self,
+        documents: List[Document],
+    ) -> Dict[str, List[Document]]:
+        """
+        Merges the metadata of documents with the same ID.
+        """
+
+        # Create a dictionary mapping IDs to documents
+        id_to_documents: Dict[str, List[Document]] = {}
+        for doc in documents:
+            id_to_documents.setdefault(doc.id, []).append(doc)
+
+        # Merge the metadata of documents with the same ID
+        # Keep the first document and merge the metadata of the rest into it
+        merged_documents = []
+        for docs in id_to_documents.values():
+            merged_doc = docs[0]
+            for doc in docs[1:]:
+                merged_doc.meta = recursively_merge_dicts(merged_doc.meta, doc.meta)
+            merged_documents.append(merged_doc)
+
+        return {"documents": merged_documents}
