@@ -27,7 +27,12 @@ from haystack_integrations.document_stores.qdrant import QdrantDocumentStore
 
 from ..config import load_config
 from ..utils import to_abs_path
-from .converters import DocxToDocuments, MergeMetadata, SetContentBasedIds
+from .converters import (
+    DocxToDocuments,
+    DuplicateChecker,
+    MergeMetadata,
+    SetContentBasedIds,
+)
 
 
 def get_document_store():
@@ -75,8 +80,13 @@ def get_indexing_pipeline():
         split_length=100,
         split_overlap=0,
     )
+    duplicate_checker = DuplicateChecker(document_store=document_store, batch_size=32)
     embedder = get_embedder(for_documents=True)
     writer = DocumentWriter(
+        document_store=document_store,
+        policy=DuplicatePolicy.FAIL,
+    )
+    overwriter = DocumentWriter(
         document_store=document_store,
         policy=DuplicatePolicy.OVERWRITE,
     )
@@ -85,16 +95,27 @@ def get_indexing_pipeline():
     pipeline.add_component("docx_converter", docx_converter)
     pipeline.add_component("cleaner", cleaner)
     pipeline.add_component("splitter", splitter)
+    # Overwrite the IDs with content-based IDs so that documents with the same content
+    # have the same IDs.
     pipeline.add_component("content_ids", SetContentBasedIds())
-    pipeline.add_component("metadata_merger", MergeMetadata())
+    # Merge documents if the DOCX contains the same content multiple times
+    pipeline.add_component("content_merger", MergeMetadata())
+    # Check for duplicates in the document store and skip embedding for duplicates
+    pipeline.add_component("duplicate_checker", duplicate_checker)
+    pipeline.add_component("duplicate_merger", MergeMetadata())
+    pipeline.add_component("overwriter", overwriter)
     pipeline.add_component("embedder", embedder)
     pipeline.add_component("writer", writer)
 
     pipeline.connect("docx_converter", "cleaner")
     pipeline.connect("cleaner", "splitter")
     pipeline.connect("splitter", "content_ids")
-    pipeline.connect("content_ids", "metadata_merger")
-    pipeline.connect("metadata_merger", "embedder")
+    pipeline.connect("content_ids", "content_merger")
+    pipeline.connect("content_merger", "duplicate_checker")
+    pipeline.connect("duplicate_checker.retrieved", "duplicate_merger")
+    pipeline.connect("duplicate_checker.hits", "duplicate_merger")
+    pipeline.connect("duplicate_merger", "overwriter")
+    pipeline.connect("duplicate_checker.misses", "embedder.documents")
     pipeline.connect("embedder", "writer")
 
     return pipeline
