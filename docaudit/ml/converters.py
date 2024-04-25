@@ -21,6 +21,7 @@ from typing import IO, Any, Dict, Generator, List
 import docx
 from docx.text.paragraph import Paragraph
 from haystack import Document, component, logging
+from haystack.document_stores.types import DocumentStore
 
 from ..utils import remove_extra_whitespace
 
@@ -199,3 +200,49 @@ class MergeMetadata:
             merged_documents.append(merged_doc)
 
         return {"documents": merged_documents}
+
+
+@component
+class DuplicateChecker:
+    """
+    Checks if documents with the same ID already exist in the Document Store. To
+    optimize performance of remote  stores, queries to the store are batched.
+    """
+
+    def __init__(self, document_store: DocumentStore, batch_size: int = 32):
+        """
+        Create an DuplicatesChecker component.
+
+        :param document_store:
+            Document store to check.
+        :param batch_size:
+            Number of documents to check in at once against the Document Store.
+        """
+        self.document_store = document_store
+        self.batch_size = batch_size
+
+    @component.output_types(
+        retrieved=List[Document], hits=List[Document], misses=List[Document]
+    )
+    def run(self, documents: List[Document]) -> Dict[str, List[Document]]:
+        """
+        Checks if documents with the same ID already exist in the Document Store.
+        """
+        retrieved = []
+        hits = []
+        misses = []
+
+        for i in range(0, len(documents), self.batch_size):
+            batch = documents[i : i + self.batch_size]
+            existing_docs = self.document_store.filter_documents(
+                dict(field="id", operator="in", value=[doc.id for doc in batch])
+            )
+            retrieved.extend(existing_docs)
+
+            for doc in batch:
+                if any(existing_doc.id == doc.id for existing_doc in existing_docs):
+                    hits.append(doc)
+                else:
+                    misses.append(doc)
+
+        return {"retrieved": retrieved, "hits": hits, "misses": misses}
