@@ -15,6 +15,7 @@
 
 import hashlib
 import re
+import uuid
 from typing import IO, Any, Dict, Generator, List
 
 import docx
@@ -98,11 +99,18 @@ class DocxToDocuments:
         def generate_documents():
             for source in sources:
                 try:
+                    source_id = str(uuid.uuid4())
                     for headers, content in DocxParser.parse(source):
                         yield Document(
                             meta={
                                 **(meta or {}),
-                                "headers": headers,
+                                "locations": [
+                                    {
+                                        "id": source_id,
+                                        "type": "docx",
+                                        "path": headers,
+                                    }
+                                ],
                             },
                             content=content,
                         )
