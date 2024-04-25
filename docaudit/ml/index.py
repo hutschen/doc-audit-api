@@ -141,3 +141,22 @@ def get_querying_pipeline():
     pipeline.connect("embedder.embedding", "retriever.query_embedding")
 
     return pipeline
+
+
+def query(
+    query: str,
+    top_k: int = 3,
+    source_ids: list[str] = None,
+):
+    if source_ids:
+        filters = dict(field="meta.locations[].id", operator="in", value=source_ids)
+    else:
+        filters = None
+
+    pipeline = get_querying_pipeline()
+    return pipeline.run(
+        dict(
+            embedder=dict(text=query),
+            retriever=dict(top_k=top_k, filters=filters),
+        )
+    )["retriever"]["documents"]
