@@ -21,6 +21,7 @@ from typing import IO, Any, Dict, Generator, List
 import docx
 from docx.text.paragraph import Paragraph
 from haystack import Document, component, logging
+from haystack.core.component.types import Variadic
 from haystack.document_stores.types import DocumentStore
 
 from ..utils import remove_extra_whitespace
@@ -177,18 +178,16 @@ class MergeMetadata:
     """
 
     @component.output_types(documents=List[Document])
-    def run(
-        self,
-        documents: List[Document],
-    ) -> Dict[str, List[Document]]:
+    def run(self, documents: Variadic[List[Document]]) -> Dict[str, List[Document]]:
         """
         Merges the metadata of documents with the same ID.
         """
 
         # Create a dictionary mapping IDs to documents
         id_to_documents: Dict[str, List[Document]] = {}
-        for doc in documents:
-            id_to_documents.setdefault(doc.id, []).append(doc)
+        for documents_list in documents:
+            for doc in documents_list:
+                id_to_documents.setdefault(doc.id, []).append(doc)
 
         # Merge the metadata of documents with the same ID
         # Keep the first document and merge the metadata of the rest into it
