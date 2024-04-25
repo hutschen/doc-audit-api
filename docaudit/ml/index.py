@@ -27,7 +27,7 @@ from haystack_integrations.document_stores.qdrant import QdrantDocumentStore
 
 from ..config import load_config
 from ..utils import to_abs_path
-from .converters import DocxToDocuments
+from .converters import DocxToDocuments, MergeMetadata, SetContentBasedIds
 
 
 def get_document_store():
@@ -78,19 +78,23 @@ def get_indexing_pipeline():
     embedder = get_embedder(for_documents=True)
     writer = DocumentWriter(
         document_store=document_store,
-        policy=DuplicatePolicy.SKIP,
+        policy=DuplicatePolicy.OVERWRITE,
     )
 
     pipeline = Pipeline()
     pipeline.add_component("docx_converter", docx_converter)
     pipeline.add_component("cleaner", cleaner)
     pipeline.add_component("splitter", splitter)
+    pipeline.add_component("content_ids", SetContentBasedIds())
+    pipeline.add_component("metadata_merger", MergeMetadata())
     pipeline.add_component("embedder", embedder)
     pipeline.add_component("writer", writer)
 
     pipeline.connect("docx_converter", "cleaner")
     pipeline.connect("cleaner", "splitter")
-    pipeline.connect("splitter", "embedder")
+    pipeline.connect("splitter", "content_ids")
+    pipeline.connect("content_ids", "metadata_merger")
+    pipeline.connect("metadata_merger", "embedder")
     pipeline.connect("embedder", "writer")
 
     return pipeline
