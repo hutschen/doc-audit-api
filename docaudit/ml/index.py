@@ -46,6 +46,16 @@ def get_document_store():
         wait_result_from_api=True,
         embedding_dim=1024,
         similarity="cosine",
+        payload_fields_to_index=[
+            dict(
+                field_name="id",
+                field_schema="keyword",
+            ),
+            dict(
+                field_name="meta.locations[].id",
+                field_schema="keyword",
+            ),
+        ],
     )
 
 
