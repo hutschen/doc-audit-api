@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import hashlib
 import re
 from typing import IO, Any, Dict, Generator, List
 
@@ -112,3 +113,25 @@ class DocxToDocuments:
                     )
 
         return {"documents": list(generate_documents())}
+
+
+@component
+class SetContentBasedIds:
+    """
+    Sets the IDs of documents based on their content. WARNING: This can result in
+    duplicate IDs when the content is the same but the metadata is different.
+    """
+
+    @component.output_types(documents=List[Document])
+    def run(
+        self,
+        documents: List[Document],
+    ) -> Dict[str, List[Document]]:
+        """
+        Sets the IDs of documents based on their content.
+        """
+
+        for doc in documents:
+            doc.id = hashlib.sha256(doc.content.encode("utf-8")).hexdigest()
+
+        return {"documents": documents}
