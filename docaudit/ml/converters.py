@@ -82,6 +82,20 @@ class DocxParser:
         yield tuple(headers), ("\n" * 2).join(contents)
 
 
+def new_source_id() -> str:
+    return str(uuid.uuid4())
+
+
+def iter_sources(sources: List[str | IO[bytes]], source_ids: List[str] | None):
+    source_ids = [] if source_ids is None else source_ids
+    length_diff = len(sources) - len(source_ids)
+    if length_diff > 0:
+        source_ids += [new_source_id() for _ in range(length_diff)]
+    elif length_diff < 0:
+        source_ids = source_ids[: len(sources)]
+    return ((s, sid) for s, sid in zip(sources, source_ids))
+
+
 @component
 class DocxToDocuments:
     """
@@ -92,6 +106,7 @@ class DocxToDocuments:
     def run(
         self,
         sources: List[str | IO[bytes]],
+        source_ids: List[str] | None = None,
         meta: Dict[str, Any] | None = None,
     ) -> Dict[str, List[Document]]:
         """
@@ -99,9 +114,8 @@ class DocxToDocuments:
         """
 
         def generate_documents():
-            for source in sources:
+            for source, source_id in iter_sources(sources, source_ids):
                 try:
-                    source_id = str(uuid.uuid4())
                     for headers, content in DocxParser.parse(source):
                         yield Document(
                             meta={

@@ -16,8 +16,44 @@
 import pytest
 from haystack import Pipeline
 
-from docaudit.ml.converters import DocxParser, DocxToDocuments, recursively_merge_dicts
+from docaudit.ml.converters import (
+    DocxParser,
+    DocxToDocuments,
+    iter_sources,
+    recursively_merge_dicts,
+)
 from docaudit.ml.index import get_indexing_pipeline, get_querying_pipeline
+
+
+# Testfälle definieren
+@pytest.mark.parametrize(
+    "sources, source_ids, expected",
+    [
+        # Case 1: If source_ids is None
+        (["Source1", "Source2"], None, [("Source1", "UUID"), ("Source2", "UUID")]),
+        # Case 2: If source_ids is shorter than sources
+        (
+            ["Source1", "Source2", "Source3"],
+            ["ID1"],
+            [("Source1", "ID1"), ("Source2", "UUID"), ("Source3", "UUID")],
+        ),
+        # Case 3: If source_ids is the same length as sources
+        (
+            ["Source1", "Source2"],
+            ["ID1", "ID2"],
+            [("Source1", "ID1"), ("Source2", "ID2")],
+        ),
+        # Case 4: If source_ids is longer than sources
+        (["Source1"], ["ID1", "ID2", "ID3"], [("Source1", "ID1")]),
+    ],
+)
+def test_iter_sources(monkeypatch, sources, source_ids, expected):
+    # Patch function that returns predictable dummy UUIDs
+    def mock_new_source_id():
+        return "UUID"
+
+    monkeypatch.setattr("docaudit.ml.converters.new_source_id", mock_new_source_id)
+    assert list(iter_sources(sources, source_ids)) == expected
 
 
 @pytest.mark.parametrize(
