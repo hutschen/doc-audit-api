@@ -13,9 +13,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from fastapi import APIRouter
-from pydantic import BaseModel
 import haystack
+from fastapi import APIRouter, Query
+from pydantic import BaseModel
+
+from ..ml.pipelines import run_query_pipeline
 
 router = APIRouter(tags=["query"])
 
@@ -23,7 +25,7 @@ router = APIRouter(tags=["query"])
 class ResultLocation(BaseModel):
     id: str
     type: str
-    path: str
+    path: list[str]
 
 
 class Result(BaseModel):
@@ -58,3 +60,21 @@ class Result(BaseModel):
             content=haystack_document.content,
             locations=locations,
         )
+
+
+@router.get("/query", response_model=list[Result])
+def run_query(
+    content: str, top_k: int = 3, source_ids: list[str] = Query(...)
+) -> list[Result]:
+    """
+    Query the given sources for the given content.
+
+    Args:
+        content: The content to query for.
+        top_k: The number of results to return.
+        source_ids: The IDs of the sources to query
+    """
+    return [
+        Result.from_haystack_document(document, source_ids)
+        for document in run_query_pipeline(content, top_k, source_ids) or []
+    ]

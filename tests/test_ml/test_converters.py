@@ -22,7 +22,11 @@ from docaudit.ml.components import (
     iter_sources,
     recursively_merge_dicts,
 )
-from docaudit.ml.pipelines import get_indexing_pipeline, get_querying_pipeline, query
+from docaudit.ml.pipelines import (
+    get_indexing_pipeline,
+    get_querying_pipeline,
+    run_query_pipeline,
+)
 
 
 # Testfälle definieren
@@ -102,5 +106,5 @@ def test_index_pipeline():
 
 
 def test_query_pipeline():
-    documents = query("Active content has to be disabled.")
+    documents = run_query_pipeline("Active content has to be disabled.")
     print(documents)

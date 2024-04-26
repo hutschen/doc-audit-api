@@ -17,7 +17,7 @@
 from functools import lru_cache
 from typing import IO, Any
 
-from haystack import Pipeline
+from haystack import Document, Pipeline
 from haystack.components.embedders import (
     SentenceTransformersDocumentEmbedder,
     SentenceTransformersTextEmbedder,
@@ -209,11 +209,11 @@ def are_indexed(source_ids: list[str]) -> dict[str, bool]:
     return {source_id: source_id not in missing_source_ids for source_id in source_ids}
 
 
-def query(
+def run_query_pipeline(
     query: str,
     top_k: int = 3,
     source_ids: list[str] = None,
-):
+) -> list[Document] | None:
     if source_ids:
         filters = dict(field="meta.locations[].id", operator="in", value=source_ids)
     else:

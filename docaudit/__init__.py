@@ -22,7 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .angular import AngularFiles
 from .config import load_config
 from .db import connection
-from .endpoints import groups, sources
+from .endpoints import groups, query, sources
 from .utils import to_abs_path
 
 config = load_config()
@@ -37,7 +37,7 @@ def get_app(lifespan=None) -> FastAPI:
 
     app.include_router(groups.router, prefix="/api")
     app.include_router(sources.router, prefix="/api")
-    # app.include_router(querying.router, prefix="/api")
+    app.include_router(query.router, prefix="/api")
     app.mount("/", AngularFiles(directory=to_abs_path("htdocs"), html=True))
     app.add_middleware(
         CORSMiddleware,
