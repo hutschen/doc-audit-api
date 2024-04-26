@@ -22,6 +22,7 @@ from haystack.components.embedders import (
     SentenceTransformersTextEmbedder,
 )
 from haystack.components.preprocessors import DocumentCleaner, DocumentSplitter
+from haystack.components.retrievers import FilterRetriever
 from haystack.components.writers import DocumentWriter
 from haystack.document_stores.types import DuplicatePolicy
 from haystack_integrations.components.retrievers.qdrant import QdrantEmbeddingRetriever
@@ -32,6 +33,7 @@ from ..utils import to_abs_path
 from .converters import (
     DocxToDocuments,
     DuplicateChecker,
+    LocationRemover,
     MergeMetadata,
     SetContentBasedIds,
     new_source_id,
@@ -131,6 +133,24 @@ def get_indexing_pipeline():
     pipeline.connect("duplicate_checker.misses", "embedder.documents")
     pipeline.connect("embedder", "writer")
 
+    return pipeline
+
+
+def get_deindexing_pipeline():
+    document_store = get_document_store()
+    filter_retriever = FilterRetriever(document_store=document_store)
+    overwriter = DocumentWriter(
+        document_store=document_store,
+        policy=DuplicatePolicy.OVERWRITE,
+    )
+
+    pipeline = Pipeline()
+    pipeline.add_component("retriever", filter_retriever)
+    pipeline.add_component("location_remover", LocationRemover())
+    pipeline.add_component("overwriter", overwriter)
+
+    pipeline.connect("retriever", "location_remover")
+    pipeline.connect("location_remover", "overwriter")
     return pipeline
 
 

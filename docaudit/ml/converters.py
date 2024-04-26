@@ -259,3 +259,31 @@ class DuplicateChecker:
                     misses.append(doc)
 
         return {"retrieved": retrieved, "hits": hits, "misses": misses}
+
+
+@component
+class LocationRemover:
+    """
+    Remove locations from the metadata of documents.
+    """
+
+    @component.output_types(documents=List[Document])
+    def run(
+        self, documents: List[Document], source_ids: List[str] | None = None
+    ) -> Dict[str, List[Document]]:
+        """
+        Remove all locations associated with specific source IDs from the metadata of
+        documents.
+        """
+
+        if source_ids is None:
+            return {"documents": documents}
+
+        for doc in documents:
+            doc.meta["locations"] = [
+                location
+                for location in doc.meta.get("locations", [])
+                if location["id"] not in source_ids
+            ]
+
+        return {"documents": documents}
