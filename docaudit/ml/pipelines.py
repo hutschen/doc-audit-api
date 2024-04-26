@@ -177,6 +177,13 @@ def run_indexing_pipeline(
     )
 
 
+def is_indexed(source_id: str) -> bool:
+    filters = dict(field="meta.locations[].id", operator="==", value=source_id)
+
+    # TODO: Count documents for a more efficient check if a source is indexed
+    return bool(len(get_document_store().filter_documents(filters=filters)))
+
+
 def query(
     query: str,
     top_k: int = 3,
