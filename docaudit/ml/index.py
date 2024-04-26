@@ -14,6 +14,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from typing import IO
+
 from haystack import Pipeline
 from haystack.components.embedders import (
     SentenceTransformersDocumentEmbedder,
@@ -32,6 +34,7 @@ from .converters import (
     DuplicateChecker,
     MergeMetadata,
     SetContentBasedIds,
+    new_source_id,
 )
 
 
@@ -141,6 +144,13 @@ def get_querying_pipeline():
     pipeline.connect("embedder.embedding", "retriever.query_embedding")
 
     return pipeline
+
+
+def index(sources: list[str | IO[bytes]]):
+    pipeline = get_indexing_pipeline()
+    source_ids = [new_source_id() for _ in range(len(sources))]
+    pipeline.run(dict(docx_converter=dict(sources=sources, source_ids=source_ids)))
+    return source_ids
 
 
 def query(
