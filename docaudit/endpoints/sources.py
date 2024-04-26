@@ -13,16 +13,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from functools import lru_cache
 import os
 import threading
+from functools import lru_cache
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from pydantic import BaseModel
 
 from ..ml.components import new_source_id
-from ..ml.pipelines import is_indexed, run_deindexing_pipeline, run_indexing_pipeline
+from ..ml.pipelines import (
+    are_indexed,
+    is_indexed,
+    run_deindexing_pipeline,
+    run_indexing_pipeline,
+)
 from .temp_file import copy_upload_to_temp_file
 
 router = APIRouter(tags=["sources"])
@@ -55,6 +60,19 @@ class SourceStatusBroker:
         if status is None:
             status = self.INDEXED if is_indexed(source_id) else self.NOT_FOUND
         return status
+
+    def get_statusses(self, source_ids: list[str]) -> dict[str, str]:
+        with self.source_id_to_status_lock:
+            statusses = {
+                source_id: self.source_id_to_status.get(source_id, None)
+                for source_id in source_ids
+            }
+        missing_source_ids = [
+            source_id for source_id, status in statusses.items() if status is None
+        ]
+        for source_id, is_indexed in are_indexed(missing_source_ids).items():
+            statusses[source_id] = self.INDEXED if is_indexed else self.NOT_FOUND
+        return statusses
 
     def is_(self, source_id: str, status: str) -> bool:
         return self.get_status(source_id) == status
@@ -120,6 +138,17 @@ def get_source_status(
     source_status_broker: SourceStatusBroker = Depends(get_source_status_broker),
 ):
     return SourceStatus(id=source_id, status=source_status_broker.get_status(source_id))
+
+
+@router.get("/sources", response_model=list[SourceStatus])
+def get_source_statusses(
+    source_ids: list[str] = Query(...),
+    source_status_broker: SourceStatusBroker = Depends(get_source_status_broker),
+):
+    return (
+        SourceStatus(id=source_id, status=status)
+        for source_id, status in source_status_broker.get_statusses(source_ids).items()
+    )
 
 
 @router.delete("/sources/{source_id}", status_code=204)
