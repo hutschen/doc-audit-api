@@ -112,3 +112,11 @@ def index_source(
 
     background_tasks.add_task(index_in_background)
     return SourceStatus(id=source_id, status="indexing")
+
+
+@router.get("/sources/{source_id}", response_model=SourceStatus)
+def get_source_status(
+    source_id: str,
+    source_status_broker: SourceStatusBroker = Depends(get_source_status_broker),
+):
+    return SourceStatus(id=source_id, status=source_status_broker.get_status(source_id))
