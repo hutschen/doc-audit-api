@@ -14,7 +14,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from typing import IO
+from functools import lru_cache
+from typing import IO, Any
 
 from haystack import Pipeline
 from haystack.components.embedders import (
@@ -36,10 +37,10 @@ from .components import (
     LocationRemover,
     MergeMetadata,
     SetContentBasedIds,
-    new_source_id,
 )
 
 
+@lru_cache
 def get_document_store():
     return QdrantDocumentStore(
         host="qdrant",
@@ -64,6 +65,7 @@ def get_document_store():
     )
 
 
+@lru_cache
 def get_embedder(for_documents: bool = True):
     config = load_config().transformers
     embedder_class = (
@@ -81,6 +83,7 @@ def get_embedder(for_documents: bool = True):
     return embedder
 
 
+@lru_cache
 def get_indexing_pipeline():
     document_store = get_document_store()
 
@@ -166,11 +169,12 @@ def get_querying_pipeline():
     return pipeline
 
 
-def index(sources: list[str | IO[bytes]]):
-    pipeline = get_indexing_pipeline()
-    source_ids = [new_source_id() for _ in range(len(sources))]
-    pipeline.run(dict(docx_converter=dict(sources=sources, source_ids=source_ids)))
-    return source_ids
+def run_indexing_pipeline(
+    sources: list[str | IO[bytes]], source_ids: list[str] | None = None
+) -> dict[str, Any]:
+    return get_indexing_pipeline().run(
+        dict(docx_converter=dict(sources=sources, source_ids=source_ids))
+    )
 
 
 def query(

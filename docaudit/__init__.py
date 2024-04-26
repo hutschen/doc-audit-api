@@ -22,10 +22,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from .angular import AngularFiles
 from .config import load_config
 from .db import connection
-from .endpoints import groups
+from .endpoints import groups, sources
 from .utils import to_abs_path
 
 config = load_config()
+
 
 def get_app(lifespan=None) -> FastAPI:
     app = FastAPI(
@@ -35,7 +36,7 @@ def get_app(lifespan=None) -> FastAPI:
     )
 
     app.include_router(groups.router, prefix="/api")
-    # app.include_router(documents.router, prefix="/api")
+    app.include_router(sources.router, prefix="/api")
     # app.include_router(querying.router, prefix="/api")
     app.mount("/", AngularFiles(directory=to_abs_path("htdocs"), html=True))
     app.add_middleware(
@@ -47,6 +48,7 @@ def get_app(lifespan=None) -> FastAPI:
     )
     return app
 
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # Startup logic
@@ -56,6 +58,7 @@ async def lifespan(_: FastAPI):
     yield
     # Shutdown logic
     connection.dispose_connection()
+
 
 app = get_app(lifespan)
 
