@@ -157,14 +157,31 @@ def deindex_source(
     source_id: str,
     source_status_broker: SourceStatusBroker = Depends(get_source_status_broker),
 ) -> None:
-    def deindex_in_background():
+    return deindex_sources(
+        background_tasks=background_tasks,
+        source_ids=[source_id],
+        source_status_broker=source_status_broker,
+    )
+
+
+@router.delete("/sources", status_code=204)
+def deindex_sources(
+    background_tasks: BackgroundTasks,
+    source_ids: list[str] = Query(...),
+    source_status_broker: SourceStatusBroker = Depends(get_source_status_broker),
+) -> None:
+    def deindex_in_background(source_ids: list[str]):
         qdrant_lock.acquire()
         try:
-            run_deindexing_pipeline(source_ids=[source_id])
+            run_deindexing_pipeline(source_ids=source_ids)
         finally:
             qdrant_lock.release()
 
-    if source_status_broker.is_(source_id, source_status_broker.INDEXED):
-        background_tasks.add_task(deindex_in_background)
-    else:
-        source_status_broker.set_aborted(source_id)
+    ids_to_deindex = set()
+    for source_id, status in source_status_broker.get_statusses(source_ids).items():
+        if status == source_status_broker.INDEXED:
+            ids_to_deindex.add(source_id)
+        elif status == source_status_broker.WAITING:
+            source_status_broker.set_aborted(source_id)
+
+    background_tasks.add_task(deindex_in_background, list(ids_to_deindex))
