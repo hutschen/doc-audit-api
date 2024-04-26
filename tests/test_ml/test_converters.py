@@ -16,13 +16,13 @@
 import pytest
 from haystack import Pipeline
 
-from docaudit.ml.converters import (
+from docaudit.ml.components import (
     DocxParser,
     DocxToDocuments,
     iter_sources,
     recursively_merge_dicts,
 )
-from docaudit.ml.index import get_indexing_pipeline, get_querying_pipeline, query
+from docaudit.ml.pipelines import get_indexing_pipeline, get_querying_pipeline, query
 
 
 # Testfälle definieren

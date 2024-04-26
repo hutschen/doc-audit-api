@@ -30,7 +30,7 @@ from haystack_integrations.document_stores.qdrant import QdrantDocumentStore
 
 from ..config import load_config
 from ..utils import to_abs_path
-from .converters import (
+from .components import (
     DocxToDocuments,
     DuplicateChecker,
     LocationRemover,
