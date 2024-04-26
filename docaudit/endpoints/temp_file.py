@@ -13,15 +13,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Any
 import shutil
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, _TemporaryFileWrapper
 from typing import Callable
 
 from fastapi import Depends, UploadFile
 
 
-def get_temp_file(suffix: str | None = None) -> Callable:
+def get_temp_file(suffix: str | None = None, delete: bool = True) -> Callable:
     """Creates a callable that returns a context manager which yields a temporary file.
 
     This should be used together with fastapi's Depends() function.
@@ -34,16 +33,20 @@ def get_temp_file(suffix: str | None = None) -> Callable:
     """
 
     def get_temp_file():
-        with NamedTemporaryFile(suffix=suffix) as temp_file:
+        with NamedTemporaryFile(suffix=suffix, delete=delete) as temp_file:
             yield temp_file
 
     return get_temp_file
 
 
 def copy_upload_to_temp_file(
-    upload_file: UploadFile, temp_file: Any = Depends(get_temp_file())
-) -> Any:
+    upload_file: UploadFile,
+    temp_file: _TemporaryFileWrapper = Depends(get_temp_file(delete=False)),
+) -> _TemporaryFileWrapper:
     """Copies the contents of an upload file to a temporary file.
+
+    Please note that the temporary file is not automatically deleted and must be deleted
+    manually.
 
     Args:
         upload_file (UploadFile): The upload file to copy.
@@ -52,5 +55,6 @@ def copy_upload_to_temp_file(
     Returns:
         NamedTemporaryFile: The temporary file.
     """
-    shutil.copyfileobj(upload_file.file, temp_file)
+    shutil.copyfileobj(upload_file.file, temp_file.file)
+    temp_file.file.seek(0)  # Reset cursor after copying
     return temp_file
