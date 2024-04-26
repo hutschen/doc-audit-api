@@ -40,7 +40,6 @@ from .components import (
 )
 
 
-@lru_cache
 def get_document_store():
     return QdrantDocumentStore(
         host="qdrant",
@@ -65,7 +64,6 @@ def get_document_store():
     )
 
 
-@lru_cache
 def get_embedder(for_documents: bool = True):
     config = load_config().transformers
     embedder_class = (
@@ -139,6 +137,7 @@ def get_indexing_pipeline():
     return pipeline
 
 
+@lru_cache
 def get_deindexing_pipeline():
     document_store = get_document_store()
     filter_retriever = FilterRetriever(document_store=document_store)
@@ -157,6 +156,7 @@ def get_deindexing_pipeline():
     return pipeline
 
 
+@lru_cache
 def get_querying_pipeline():
     embedder = get_embedder(for_documents=False)
     retriever = QdrantEmbeddingRetriever(document_store=get_document_store())
