@@ -22,7 +22,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
 
 from ..ml.components import new_source_id
-from ..ml.pipelines import is_indexed, run_indexing_pipeline
+from ..ml.pipelines import is_indexed, run_deindexing_pipeline, run_indexing_pipeline
 from .temp_file import copy_upload_to_temp_file
 
 router = APIRouter(tags=["sources"])
@@ -120,3 +120,22 @@ def get_source_status(
     source_status_broker: SourceStatusBroker = Depends(get_source_status_broker),
 ):
     return SourceStatus(id=source_id, status=source_status_broker.get_status(source_id))
+
+
+@router.delete("/sources/{source_id}", status_code=204)
+def deindex_source(
+    background_tasks: BackgroundTasks,
+    source_id: str,
+    source_status_broker: SourceStatusBroker = Depends(get_source_status_broker),
+) -> None:
+    def deindex_in_background():
+        qdrant_lock.acquire()
+        try:
+            run_deindexing_pipeline(source_ids=[source_id])
+        finally:
+            qdrant_lock.release()
+
+    if source_status_broker.is_(source_id, source_status_broker.INDEXED):
+        background_tasks.add_task(deindex_in_background)
+    else:
+        source_status_broker.set_aborted(source_id)

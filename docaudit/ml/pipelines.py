@@ -177,6 +177,16 @@ def run_indexing_pipeline(
     )
 
 
+def run_deindexing_pipeline(source_ids: list[str]) -> dict[str, Any]:
+    filters = dict(field="meta.locations[].id", operator="in", value=source_ids)
+    return get_deindexing_pipeline().run(
+        dict(
+            retriever=dict(filters=filters),
+            location_remover=dict(source_ids=source_ids),
+        )
+    )
+
+
 def is_indexed(source_id: str) -> bool:
     filters = dict(field="meta.locations[].id", operator="==", value=source_id)
 
