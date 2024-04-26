@@ -194,6 +194,21 @@ def is_indexed(source_id: str) -> bool:
     return bool(len(get_document_store().filter_documents(filters=filters)))
 
 
+def are_indexed(source_ids: list[str]) -> dict[str, bool]:
+    if not source_ids:
+        return {}
+
+    filters = dict(field="meta.locations[].id", operator="in", value=source_ids)
+    missing_source_ids = set(source_ids)
+    for doc in get_document_store().get_documents_generator(filters=filters):
+        for location in doc.meta.get("locations", []):
+            missing_source_ids.discard(location["id"])
+        if not missing_source_ids:  # All source IDs are found
+            break
+
+    return {source_id: source_id not in missing_source_ids for source_id in source_ids}
+
+
 def query(
     query: str,
     top_k: int = 3,
