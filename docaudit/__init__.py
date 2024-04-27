@@ -21,7 +21,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .angular import AngularFiles
 from .config import load_config
-from .db import connection
 from .endpoints import query, sources
 from .utils import to_abs_path
 
@@ -51,12 +50,8 @@ def get_app(lifespan=None) -> FastAPI:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # Startup logic
-    # migration.migrate(config.database)
-    connection.setup_connection(config.database)
-    connection.create_all()
     yield
     # Shutdown logic
-    connection.dispose_connection()
 
 
 app = get_app(lifespan)
