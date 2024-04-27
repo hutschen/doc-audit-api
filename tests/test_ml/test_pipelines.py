@@ -14,11 +14,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from haystack import Pipeline
+import pytest
 
 from docaudit.ml.components import DocxToDocuments
 from docaudit.ml.pipelines import get_indexing_pipeline, run_query_pipeline
 
 
+@pytest.mark.sketched
 def test_parse_docx_pipeline():
     docx_converter = DocxToDocuments()
 
@@ -27,12 +29,14 @@ def test_parse_docx_pipeline():
     parsing_pipeline.run(dict(docx_converter=dict(sources=["tests/data/test.docx"])))
 
 
+@pytest.mark.sketched
 def test_index_pipeline():
     pipeline = get_indexing_pipeline()
     result = pipeline.run(dict(docx_converter=dict(sources=["tests/data/test.docx"])))
     print(result["writer"])
 
 
+@pytest.mark.sketched
 def test_query_pipeline():
     documents = run_query_pipeline("Active content has to be disabled.")
     print(documents)
