@@ -26,10 +26,11 @@ from haystack.components.preprocessors import DocumentCleaner, DocumentSplitter
 from haystack.components.retrievers import FilterRetriever
 from haystack.components.writers import DocumentWriter
 from haystack.document_stores.types import DuplicatePolicy
+from haystack.utils import Secret
 from haystack_integrations.components.retrievers.qdrant import QdrantEmbeddingRetriever
 from haystack_integrations.document_stores.qdrant import QdrantDocumentStore
 
-from ..config import load_config
+from ..config import get_config
 from ..utils import to_abs_path
 from .components import (
     DocxToDocuments,
@@ -41,12 +42,15 @@ from .components import (
 
 
 def get_document_store():
+    config = get_config().qdrant
     return QdrantDocumentStore(
-        host="qdrant",
-        port=6333,
-        grpc_port=6334,
-        https=False,
-        index="docaudit",  # Name of Qdrant collection
+        host=config.host,
+        port=config.port,
+        grpc_port=config.grpc_port,
+        prefer_grpc=config.prefer_grpc,
+        https=config.https,
+        api_key=Secret.from_token(config.api_key) if config.api_key else None,
+        index=config.collection_name,
         return_embedding=True,
         wait_result_from_api=True,
         embedding_dim=1024,
@@ -65,7 +69,7 @@ def get_document_store():
 
 
 def get_embedder(for_documents: bool = True):
-    config = load_config().transformers
+    config = get_config().haystack
     embedder_class = (
         SentenceTransformersDocumentEmbedder
         if for_documents
@@ -74,7 +78,7 @@ def get_embedder(for_documents: bool = True):
     embedder = embedder_class(
         model=to_abs_path(config.embedding_model),
         progress_bar=True,
-        batch_size=32,
+        batch_size=config.batch_size,
         normalize_embeddings=True,
     )
     embedder.warm_up()
@@ -83,6 +87,7 @@ def get_embedder(for_documents: bool = True):
 
 @lru_cache
 def get_indexing_pipeline():
+    config = get_config().haystack
     document_store = get_document_store()
 
     docx_converter = DocxToDocuments()
@@ -96,7 +101,10 @@ def get_indexing_pipeline():
         split_length=100,
         split_overlap=0,
     )
-    duplicate_checker = DuplicateChecker(document_store=document_store, batch_size=32)
+    duplicate_checker = DuplicateChecker(
+        document_store=document_store,
+        batch_size=config.batch_size,
+    )
     embedder = get_embedder(for_documents=True)
     writer = DocumentWriter(
         document_store=document_store,
