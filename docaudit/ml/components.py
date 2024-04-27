@@ -68,8 +68,9 @@ class DocxParser:
             paragraph_level = cls.parse_level(paragraph)
             paragraph_text = remove_extra_whitespace(paragraph.text)
             if paragraph_level is not None:
-                # Paragraph is a heading, so yield the previous content
-                yield tuple(headers), ("\n" * 2).join(contents)
+                # Paragraph is a heading, so yield the previous content if there is any
+                if headers or contents:
+                    yield tuple(headers), ("\n" * 2).join(contents)
 
                 # Update headers and reset content
                 headers = headers[: paragraph_level - 1]
@@ -79,7 +80,9 @@ class DocxParser:
                 # Paragraph is not a heading
                 contents.append(paragraph_text)
 
-        yield tuple(headers), ("\n" * 2).join(contents)
+        # Yield the last headers and content if there are any
+        if headers or contents:
+            yield tuple(headers), ("\n" * 2).join(contents)
 
 
 def new_source_id() -> str:
