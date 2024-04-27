@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .angular import AngularFiles
 from .config import load_config
 from .endpoints import query, sources
+from .ml.pipelines import get_indexing_pipeline, get_querying_pipeline
 from .utils import to_abs_path
 
 config = load_config()
@@ -32,6 +33,7 @@ def get_app(lifespan=None) -> FastAPI:
         title="DocAudit API",
         docs_url=config.fastapi.docs_url,
         redoc_url=config.fastapi.redoc_url,
+        lifespan=lifespan,
     )
 
     app.include_router(sources.router, prefix="/api")
@@ -50,6 +52,9 @@ def get_app(lifespan=None) -> FastAPI:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # Startup logic
+    # Warm up pipelines that use an embedder to speed up the first request
+    get_indexing_pipeline()
+    get_querying_pipeline()
     yield
     # Shutdown logic
 
