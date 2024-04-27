@@ -15,34 +15,11 @@
 
 import shutil
 from tempfile import NamedTemporaryFile, _TemporaryFileWrapper
-from typing import Callable
 
-from fastapi import Depends, UploadFile
-
-
-def get_temp_file(suffix: str | None = None, delete: bool = True) -> Callable:
-    """Creates a callable that returns a context manager which yields a temporary file.
-
-    This should be used together with fastapi's Depends() function.
-
-    Args:
-        suffix (str or None, optional): The suffix of the temporary file. Defaults to None.
-
-    Returns:
-        callable: Callable that returns a context manager that yields a temporary file.
-    """
-
-    def get_temp_file():
-        with NamedTemporaryFile(suffix=suffix, delete=delete) as temp_file:
-            yield temp_file
-
-    return get_temp_file
+from fastapi import UploadFile
 
 
-def copy_upload_to_temp_file(
-    upload_file: UploadFile,
-    temp_file: _TemporaryFileWrapper = Depends(get_temp_file(delete=False)),
-) -> _TemporaryFileWrapper:
+def copy_upload_to_temp_file(upload_file: UploadFile) -> _TemporaryFileWrapper:
     """Copies the contents of an upload file to a temporary file.
 
     Please note that the temporary file is not automatically deleted and must be deleted
@@ -50,11 +27,28 @@ def copy_upload_to_temp_file(
 
     Args:
         upload_file (UploadFile): The upload file to copy.
-        temp_file (NamedTemporaryFile, optional): The temporary file to copy to.
 
     Returns:
         NamedTemporaryFile: The temporary file.
     """
+    temp_file = NamedTemporaryFile(delete=False)
     shutil.copyfileobj(upload_file.file, temp_file.file)
     temp_file.file.seek(0)  # Reset cursor after copying
     return temp_file
+
+
+def copy_uploads_to_temp_files(
+    upload_files: list[UploadFile],
+) -> list[_TemporaryFileWrapper]:
+    """Copies uploaded files to temporary files.
+
+    Please note that the temporary files are not automatically deleted and must be
+    deleted manually.
+
+    Args:
+        upload_files (list[UploadFile]): The upload files to copy.
+
+    Returns:
+        list[_NamedTemporaryFile]: A generator of temporary files.
+    """
+    return [copy_upload_to_temp_file(upload_file) for upload_file in upload_files]

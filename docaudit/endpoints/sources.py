@@ -28,7 +28,7 @@ from ..ml.pipelines import (
     run_deindexing_pipeline,
     run_indexing_pipeline,
 )
-from .temp_file import copy_upload_to_temp_file
+from .temp_file import copy_uploads_to_temp_files
 
 router = APIRouter(tags=["sources"])
 qdrant_lock = threading.Lock()
@@ -106,30 +106,34 @@ def get_source_status_broker() -> SourceStatusBroker:
     return SourceStatusBroker()
 
 
-@router.post("/sources", status_code=201, response_model=SourceStatus)
+@router.post("/sources", status_code=201, response_model=list[SourceStatus])
 def index_source(
     background_tasks: BackgroundTasks,
-    temp_file: Any = Depends(copy_upload_to_temp_file),
-    source_id: str = Depends(new_source_id),
+    temp_files: list[Any] = Depends(copy_uploads_to_temp_files),
     source_status_broker: SourceStatusBroker = Depends(get_source_status_broker),
 ):
 
-    def index_in_background():
-        qdrant_lock.acquire()
-        try:
-            if source_status_broker.is_(source_id, source_status_broker.ABORTED):
-                return
+    def index_in_background(temp_files: list[Any], source_ids: list[str]):
+        for temp_file, source_id in zip(temp_files, source_ids):
+            # Use the pipeline with one source at a time to give other processes a
+            # chance to aquire the lock.
+            qdrant_lock.acquire()
+            try:
+                if source_status_broker.is_(source_id, source_status_broker.ABORTED):
+                    continue
+                source_status_broker.set_indexing(source_id)
+                run_indexing_pipeline(sources=[temp_file.name], source_ids=[source_id])
 
-            source_status_broker.set_indexing(source_id)
-            run_indexing_pipeline(sources=[temp_file.name], source_ids=[source_id])
+            finally:
+                source_status_broker.set_completed(source_id)
+                qdrant_lock.release()
+                os.remove(temp_file.name)
 
-        finally:
-            source_status_broker.set_completed(source_id)
-            qdrant_lock.release()
-            os.remove(temp_file.name)
-
-    background_tasks.add_task(index_in_background)
-    return SourceStatus(id=source_id, status="indexing")
+    source_ids = [new_source_id() for _ in temp_files]
+    background_tasks.add_task(index_in_background, temp_files, source_ids)
+    for source_id in source_ids:
+        source_status_broker.set_waiting(source_id)
+        yield SourceStatus(id=source_id, status=source_status_broker.WAITING)
 
 
 @router.get("/sources/{source_id}", response_model=SourceStatus)
