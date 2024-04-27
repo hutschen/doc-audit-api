@@ -12,24 +12,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Testfälle definieren
 
 import pytest
-from haystack import Pipeline
 
-from docaudit.ml.components import (
-    DocxParser,
-    DocxToDocuments,
-    iter_sources,
-    recursively_merge_dicts,
-)
-from docaudit.ml.pipelines import (
-    get_indexing_pipeline,
-    get_querying_pipeline,
-    run_query_pipeline,
-)
+from docaudit.ml.components import DocxParser, iter_sources, recursively_merge_dicts
 
 
-# Testfälle definieren
 @pytest.mark.parametrize(
     "sources, source_ids, expected",
     [
@@ -56,7 +45,7 @@ def test_iter_sources(monkeypatch, sources, source_ids, expected):
     def mock_new_source_id():
         return "UUID"
 
-    monkeypatch.setattr("docaudit.ml.converters.new_source_id", mock_new_source_id)
+    monkeypatch.setattr("docaudit.ml.components.new_source_id", mock_new_source_id)
     assert list(iter_sources(sources, source_ids)) == expected
 
 
@@ -86,25 +75,6 @@ def test_recursively_merge_dicts(d1, d2, expected):
     assert recursively_merge_dicts(d1, d2) == expected
 
 
-# TODO: Build up a test Document with python-docx and test parsing it.
 def test_parse_docx():
+    # TODO: Build up a test Document with python-docx and test parsing it.
     list(DocxParser.parse("tests/data/test.docx"))
-
-
-def test_parse_docx_pipeline():
-    docx_converter = DocxToDocuments()
-
-    parsing_pipeline = Pipeline()
-    parsing_pipeline.add_component("docx_converter", docx_converter)
-    parsing_pipeline.run(dict(docx_converter=dict(sources=["tests/data/test.docx"])))
-
-
-def test_index_pipeline():
-    pipeline = get_indexing_pipeline()
-    result = pipeline.run(dict(docx_converter=dict(sources=["tests/data/test.docx"])))
-    print(result["writer"])
-
-
-def test_query_pipeline():
-    documents = run_query_pipeline("Active content has to be disabled.")
-    print(documents)
