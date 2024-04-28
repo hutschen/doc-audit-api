@@ -1,12 +1,9 @@
 # Project specific
 config.yml
 !.devcontainer/config.yml
-*.db
 *.pyc
 __pycache__
 .pytest_cache
-faiss/*
-!faiss/.gitkeep
 tests/data/*
 !tests/data/.gitkeep
 

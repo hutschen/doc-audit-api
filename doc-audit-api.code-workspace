@@ -14,7 +14,6 @@
     "python.analysis.typeCheckingMode": "off",
     "python.languageServer": "Pylance",
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
     "[python]": {
       "editor.defaultFormatter": "ms-python.black-formatter",
       "editor.rulers": [88]

@@ -21,14 +21,19 @@ from uvicorn.config import LOGGING_CONFIG, SSL_PROTOCOL_VERSION
 from .utils import to_abs_path
 
 
-class DatabaseConfig(BaseModel):
-    url: str = "sqlite://"
-    echo: bool = False
-
-
-class TransformersConfig(BaseModel):
+class HaystackConfig(BaseModel):
     embedding_model: str = "gbert-large-paraphrase-cosine"
-    use_gpu: bool = False
+    batch_size: int = 32  # Number of Haystack Documents to process in Pipelines at once
+
+
+class QdrantConfig(BaseModel):
+    host: str = "localhost"
+    port: int = 6333
+    grpc_port: int = 6334
+    prefer_grpc: bool = False
+    https: bool = False
+    api_key: str | None = None
+    collection_name: str = "docaudit"
 
 
 class FastApiConfig(BaseModel):
@@ -78,8 +83,8 @@ class UvicornConfig(BaseModel):
 
 
 class Config(BaseModel):
-    database: DatabaseConfig = DatabaseConfig()
-    transformers: TransformersConfig = TransformersConfig()
+    qdrant: QdrantConfig = QdrantConfig()
+    haystack: HaystackConfig = HaystackConfig()
     fastapi: FastApiConfig = FastApiConfig()
     uvicorn: UvicornConfig = UvicornConfig()
 
@@ -88,7 +93,7 @@ CONFIG_FILENAME = "config.yml"
 
 
 @lru_cache()
-def load_config() -> Config:
+def get_config() -> Config:
     with open(to_abs_path(CONFIG_FILENAME), "r") as config_file:
         config_data = yaml.safe_load(config_file)
-    return Config.parse_obj(config_data)
+    return Config.model_validate(config_data)
