@@ -28,7 +28,7 @@ from ..ml.pipelines import (
     run_deindexing_pipeline,
     run_indexing_pipeline,
 )
-from .temp_file import copy_uploads_to_temp_files
+from .temp_file import copy_upload_to_temp_file, copy_uploads_to_temp_files
 
 router = APIRouter(tags=["sources"])
 qdrant_lock = threading.Lock()
@@ -106,13 +106,27 @@ def get_source_status_broker() -> SourceStatusBroker:
     return SourceStatusBroker()
 
 
-@router.post("/sources", status_code=201, response_model=list[SourceStatus])
+@router.post("/sources/single", status_code=201, response_model=SourceStatus)
 def index_source(
+    background_tasks: BackgroundTasks,
+    temp_file: Any = Depends(copy_upload_to_temp_file),
+    source_status_broker: SourceStatusBroker = Depends(get_source_status_broker),
+) -> SourceStatus:
+    for source_status in index_sources(
+        background_tasks=background_tasks,
+        temp_files=[temp_file],
+        source_status_broker=source_status_broker,
+    ):
+        return source_status
+    raise RuntimeError("No source status returned. Failed to index source.")
+
+
+@router.post("/sources", status_code=201, response_model=list[SourceStatus])
+def index_sources(
     background_tasks: BackgroundTasks,
     temp_files: list[Any] = Depends(copy_uploads_to_temp_files),
     source_status_broker: SourceStatusBroker = Depends(get_source_status_broker),
 ):
-
     def index_in_background(temp_files: list[Any], source_ids: list[str]):
         for temp_file, source_id in zip(temp_files, source_ids):
             # Use the pipeline with one source at a time to give other processes a
