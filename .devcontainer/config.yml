@@ -1,0 +1,13 @@
+haystack:
+  embedding_model: gbert-large-paraphrase-cosine
+qdrant:
+  host: qdrant
+  port: 6333
+  https: false
+fastapi:
+  docs_url: /docs
+  redoc_url: /redoc
+uvicorn:
+  port: 8000
+  reload: true
+  log_level: info
