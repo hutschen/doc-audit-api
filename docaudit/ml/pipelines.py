@@ -76,7 +76,11 @@ def get_embedder(for_documents: bool = True):
         else SentenceTransformersTextEmbedder
     )
     embedder = embedder_class(
-        model=to_abs_path(config.embedding_model),
+        model=(
+            config.embedding_model
+            if config.remote_model
+            else to_abs_path(config.embedding_model)
+        ),
         progress_bar=True,
         batch_size=config.batch_size,
         normalize_embeddings=True,

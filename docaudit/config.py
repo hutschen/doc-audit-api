@@ -22,7 +22,8 @@ from .utils import to_abs_path
 
 
 class HaystackConfig(BaseModel):
-    embedding_model: str = "gbert-large-paraphrase-cosine"
+    embedding_model: str = "deutsche-telekom/gbert-large-paraphrase-cosine"
+    remote_model: bool = True  # Download model from Hugging Face Hub
     batch_size: int = 32  # Number of Haystack Documents to process in Pipelines at once
 
 
